@@ -5,6 +5,35 @@ import { History, User, Calendar, Star, ArrowRight, BarChart2 } from 'lucide-rea
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Predefined recommendations for each skill
+const predefinedRecommendations = {
+  Communication: [
+    "Practice active listening to enhance your communication skills.",
+    "Join group discussions to refine your ability to articulate ideas clearly.",
+    "Use your strong communication to lead team projects effectively.",
+  ],
+  Clarity: [
+    "Structure your responses with clear introductions and conclusions.",
+    "Practice summarizing complex ideas to improve clarity.",
+    "Seek feedback on your explanations to ensure they are easy to follow.",
+  ],
+  Confidence: [
+    "Prepare thoroughly for sessions to boost your confidence.",
+    "Practice public speaking to build self-assurance in group settings.",
+    "Leverage your confidence to inspire others in discussions.",
+  ],
+  Engagement: [
+    "Ask open-ended questions to maintain high engagement in conversations.",
+    "Participate in interactive workshops to enhance audience engagement.",
+    "Use your strong engagement to foster collaborative environments.",
+  ],
+  Reasoning: [
+    "Solve logic puzzles regularly to sharpen your reasoning skills.",
+    "Engage in debates to practice structured argumentation.",
+    "Analyze case studies to improve your critical thinking abilities.",
+  ],
+};
+
 function FeedbackHistory() {
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
@@ -37,6 +66,7 @@ function FeedbackHistory() {
     async function fetchFeedback() {
       if (!user || !user.id) {
         toast.error('User not authenticated');
+        navigate('/login');
         setLoading(false);
         return;
       }
@@ -51,13 +81,14 @@ function FeedbackHistory() {
           toast.error(data.error || 'Failed to load feedback history');
         }
       } catch (error) {
+        console.error("Error fetching feedback:", error);
         toast.error('Failed to load feedback history');
       } finally {
         setLoading(false);
       }
     }
     fetchFeedback();
-  }, [user]);
+  }, [user, navigate]);
 
   // Function to view detailed feedback
   const viewFeedbackDetails = (feedback) => {
@@ -88,8 +119,44 @@ function FeedbackHistory() {
       ));
   };
 
+  // Function to get recommendations for bottom two metrics
+  const getRecommendations = (feedback) => {
+    const skills = [
+      { subject: "Communication", score: feedback.communication || 0 },
+      { subject: "Clarity", score: feedback.clarity || 0 },
+      { subject: "Confidence", score: feedback.confidence || 0 },
+      { subject: "Engagement", score: feedback.engagement || 0 },
+      { subject: "Reasoning", score: feedback.reasoning || 0 },
+    ];
+    const sortedSkills = [...skills].sort((a, b) => a.score - b.score); // Ascending for bottom
+    const bottomTwo = sortedSkills.slice(0, 2).map(skill => skill.subject);
+    const recommendations = [];
+    bottomTwo.forEach((area) => {
+      const recs = predefinedRecommendations[area];
+      if (recs && recs.length > 0) {
+        recommendations.push(recs[0]); // First recommendation for improvement
+      }
+    });
+    return recommendations;
+  };
+
+  // Function to get strengths and improvements
+  const getStrengthsAndImprovements = (feedback) => {
+    const skills = [
+      { subject: "Communication", score: feedback.communication || 0 },
+      { subject: "Clarity", score: feedback.clarity || 0 },
+      { subject: "Confidence", score: feedback.confidence || 0 },
+      { subject: "Engagement", score: feedback.engagement || 0 },
+      { subject: "Reasoning", score: feedback.reasoning || 0 },
+    ];
+    const sortedSkills = [...skills].sort((a, b) => b.score - a.score);
+    const strengths = sortedSkills.slice(0, 2).map(skill => ({ area: skill.subject, score: skill.score }));
+    const improvements = sortedSkills.slice(-2).map(skill => ({ area: skill.subject, score: skill.score }));
+    return { strengths, improvements };
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f1a] via-[#1a1025] to-[#1e0a2e] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0f1a] via-[#1a1025] to-[#1e0a2e] text-white overflow-hidden">
       {/* Background mesh gradients */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-radial from-[#5f0f9980] via-transparent to-transparent opacity-30" />
@@ -99,22 +166,21 @@ function FeedbackHistory() {
       </div>
       {/* Stars background */}
       <div className="fixed inset-0 z-0">
-          {stars.map((star) => (
-            <div
-              key={star.id}
-              className={`absolute rounded-full bg-white ${star.blinking ? 'animate-pulse' : ''}`}
-              style={{
-                left: `${star.x}%`,
-                top: `${star.y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                opacity: star.opacity,
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          ))}
-        </div>
-
+        {stars.map((star) => (
+          <div
+            key={star.id}
+            className={`absolute rounded-full bg-white ${star.blinking ? 'animate-pulse' : ''}`}
+            style={{
+              left: `${star.x}%`,
+              top: `${star.y}%`,
+              width: `${star.size}px`,
+              height: `${star.size}px`,
+              opacity: star.opacity,
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        ))}
+      </div>
 
       <div className="container mx-auto px-4 py-12 relative z-10">
         {/* Main content card */}
@@ -122,7 +188,7 @@ function FeedbackHistory() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-4xl mx-auto bg-gradient-to-tr from-[#1a0b25]/80 to-[#2a1040]/80 backdrop-blur-md p-1 rounded-2xl"
+          className="max-w-5xl mx-auto bg-gradient-to-tr from-[#1a0b25]/80 to-[#2a1040]/80 backdrop-blur-md p-1 rounded-2xl overflow-hidden"
         >
           <div className="bg-[#0f0f1a]/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-purple-500/20 min-h-[70vh]">
             {/* Header */}
@@ -168,7 +234,7 @@ function FeedbackHistory() {
                     className="bg-[#1a1025]/70 backdrop-blur-md rounded-xl p-6 border border-purple-500/20"
                   >
                     <div className="flex justify-between items-start mb-6">
-                      <h2 className="text-xl font-semibold text-white">{selectedFeedback.sessionId.topic}</h2>
+                      <h2 className="text-xl font-semibold text-white">{selectedFeedback.sessionId?.topic || 'Session'}</h2>
                       <button
                         onClick={closeDetails}
                         className="p-2 rounded-full bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
@@ -183,7 +249,7 @@ function FeedbackHistory() {
                           <User className="h-5 w-5 text-purple-400 mr-2" />
                           <div>
                             <p className="text-sm text-gray-400">Evaluator</p>
-                            <p className="text-white">{selectedFeedback.evaluatorId.name}</p>
+                            <p className="text-white">{selectedFeedback.evaluatorId?.name || 'Unknown'}</p>
                           </div>
                         </div>
 
@@ -200,28 +266,65 @@ function FeedbackHistory() {
                         <div>
                           <p className="text-sm text-gray-400 mb-1">Communication</p>
                           <div className="flex items-center">
-                            {renderRatingStars(selectedFeedback.communication)}
-                            <span className="ml-2 text-white">{selectedFeedback.communication}/5</span>
+                            {renderRatingStars(selectedFeedback.communication || 0)}
+                            <span className="ml-2 text-white">{(selectedFeedback.communication || 0).toFixed(1)}/5</span>
                           </div>
                         </div>
 
                         <div>
                           <p className="text-sm text-gray-400 mb-1">Clarity</p>
                           <div className="flex items-center">
-                            {renderRatingStars(selectedFeedback.clarity)}
-                            <span className="ml-2 text-white">{selectedFeedback.clarity}/5</span>
+                            {renderRatingStars(selectedFeedback.clarity || 0)}
+                            <span className="ml-2 text-white">{(selectedFeedback.clarity || 0).toFixed(1)}/5</span>
                           </div>
                         </div>
 
-                        {selectedFeedback.confidence && (
-                          <div>
-                            <p className="text-sm text-gray-400 mb-1">Confidence</p>
-                            <div className="flex items-center">
-                              {renderRatingStars(selectedFeedback.confidence)}
-                              <span className="ml-2 text-white">{selectedFeedback.confidence}/5</span>
-                            </div>
+                        <div>
+                          <p className="text-sm text-gray-400 mb-1">Confidence</p>
+                          <div className="flex items-center">
+                            {renderRatingStars(selectedFeedback.confidence || 0)}
+                            <span className="ml-2 text-white">{(selectedFeedback.confidence || 0).toFixed(1)}/5</span>
                           </div>
-                        )}
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-400 mb-1">Engagement</p>
+                          <div className="flex items-center">
+                            {renderRatingStars(selectedFeedback.engagement || 0)}
+                            <span className="ml-2 text-white">{(selectedFeedback.engagement || 0).toFixed(1)}/5</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-400 mb-1">Reasoning</p>
+                          <div className="flex items-center">
+                            {renderRatingStars(selectedFeedback.reasoning || 0)}
+                            <span className="ml-2 text-white">{(selectedFeedback.reasoning || 0).toFixed(1)}/5</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-lg font-medium mb-4 text-green-400">Your Strengths</p>
+                        <ul className="space-y-2 text-gray-300">
+                          {getStrengthsAndImprovements(selectedFeedback).strengths.map((strength, index) => (
+                            <li key={index}>
+                              {strength.area}: {strength.score.toFixed(1)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-lg font-medium mb-4 text-amber-400">Areas for Improvement</p>
+                        <ul className="space-y-2 text-gray-300">
+                          {getStrengthsAndImprovements(selectedFeedback).improvements.map((improvement, index) => (
+                            <li key={index}>
+                              {improvement.area}: {improvement.score.toFixed(1)}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
 
@@ -232,12 +335,25 @@ function FeedbackHistory() {
                       </div>
                     </div>
 
+                    <div className="mt-6">
+                      <p className="text-lg font-medium mb-2">Recommendations</p>
+                      <ul className="list-disc list-inside space-y-2 text-gray-300">
+                        {getRecommendations(selectedFeedback).length > 0 ? (
+                          getRecommendations(selectedFeedback).map((rec, index) => (
+                            <li key={index}>{rec}</li>
+                          ))
+                        ) : (
+                          <li>No recommendations available.</li>
+                        )}
+                      </ul>
+                    </div>
+
                     <div className="mt-8 flex justify-center">
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
+                        whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(236,72,153,0.5)' }}
                         whileTap={{ scale: 0.95 }}
                         onClick={closeDetails}
-                        className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium"
+                        className="px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium"
                       >
                         Back to All Feedback
                       </motion.button>
@@ -265,10 +381,10 @@ function FeedbackHistory() {
                       >
                         <div className="flex flex-col md:flex-row justify-between md:items-center">
                           <div className="mb-3 md:mb-0">
-                            <h3 className="font-medium text-white text-lg mb-1">{feedback.sessionId.topic}</h3>
+                            <h3 className="font-medium text-white text-lg mb-1">{feedback.sessionId?.topic || 'Session'}</h3>
                             <div className="flex items-center text-sm text-gray-400">
                               <User className="h-3.5 w-3.5 mr-1" />
-                              <span>{feedback.evaluatorId.name}</span>
+                              <span>{feedback.evaluatorId?.name || 'Unknown'}</span>
                               <span className="mx-2">•</span>
                               <Calendar className="h-3.5 w-3.5 mr-1" />
                               <span>{formatDate(feedback.createdAt)}</span>
@@ -277,10 +393,25 @@ function FeedbackHistory() {
 
                           <div className="flex items-center space-x-4">
                             <div className="flex flex-col items-center">
-                              <div className="flex">{renderRatingStars(feedback.communication)}</div>
+                              <div className="flex">{renderRatingStars(feedback.communication || 0)}</div>
                               <span className="text-xs text-gray-400 mt-1">Communication</span>
                             </div>
-
+                            <div className="flex flex-col items-center">
+                              <div className="flex">{renderRatingStars(feedback.clarity || 0)}</div>
+                              <span className="text-xs text-gray-400 mt-1">Clarity</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <div className="flex">{renderRatingStars(feedback.confidence || 0)}</div>
+                              <span className="text-xs text-gray-400 mt-1">Confidence</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <div className="flex">{renderRatingStars(feedback.engagement || 0)}</div>
+                              <span className="text-xs text-gray-400 mt-1">Engagement</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <div className="flex">{renderRatingStars(feedback.reasoning || 0)}</div>
+                              <span className="text-xs text-gray-400 mt-1">Reasoning</span>
+                            </div>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
@@ -313,7 +444,7 @@ function FeedbackHistory() {
                 </motion.button>
               </Link>
 
-              <Link to="#">
+              <Link to="/analytics">
                 <motion.button
                   whileHover={{
                     scale: 1.05,
@@ -350,6 +481,8 @@ function FeedbackHistory() {
         draggable
         pauseOnHover
         theme="dark"
+        toastClassName="bg-[#1a1025]/90 backdrop-blur-md border border-purple-500/20 text-white"
+        progressClassName="bg-pink-500"
       />
     </div>
   );
