@@ -6,6 +6,9 @@ const feedbackSchema = new mongoose.Schema({
   participantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   communication: { type: Number, min: 1, max: 5, required: true },
   clarity: { type: Number, min: 1, max: 5, required: true },
+  confidence: { type: Number, min: 1, max: 5, required: true },
+  engagement: { type: Number, min: 1, max: 5, required: true },
+  reasoning: { type: Number, min: 1, max: 5, required: true },
   comments: { type: String },
   createdAt: { type: Date, default: Date.now },
 });

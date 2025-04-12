@@ -33,7 +33,10 @@ const getAnalytics = async (req, res) => {
   const totalSessions = feedbacks.length;
   const averageCommunication = feedbacks.reduce((sum, f) => sum + f.communication, 0) / totalSessions || 0;
   const averageClarity = feedbacks.reduce((sum, f) => sum + f.clarity, 0) / totalSessions || 0;
-  res.json({ totalSessions, averageCommunication, averageClarity, trend: feedbacks });
+  const averageConfidence = feedbacks.reduce((sum, f) => sum + f.confidence, 0) / totalSessions || 0;
+  const averageReasoning = feedbacks.reduce((sum, f) => sum + f.reasoning, 0) / totalSessions || 0;
+  const averageEngagement = feedbacks.reduce((sum, f) => sum + f.engagement, 0) / totalSessions || 0;  
+  res.json({ totalSessions, averageCommunication, averageClarity,averageConfidence,averageEngagement,averageReasoning,trend: feedbacks });
 };
 
 module.exports = { submitFeedback, submitBulkFeedback, getFeedbackHistory, getAnalytics };
