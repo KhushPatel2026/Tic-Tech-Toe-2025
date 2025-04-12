@@ -106,6 +106,27 @@ const LineChartComponent = ({ data }) => (
         stroke="#8b5cf6"
         activeDot={{ r: 8 }}
       />
+      <Line
+        type="monotone"
+        dataKey="confidence"
+        name="Confidence"
+        stroke="#10b981"
+        activeDot={{ r: 8 }}
+      />
+      <Line
+        type="monotone"
+        dataKey="engagement"
+        name="Engagement"
+        stroke="#f59e0b"
+        activeDot={{ r: 8 }}
+      />
+      <Line
+        type="monotone"
+        dataKey="reasoning"
+        name="Reasoning"
+        stroke="#3b82f6"
+        activeDot={{ r: 8 }}
+      />
     </LineChart>
   </ResponsiveContainer>
 );
@@ -203,6 +224,35 @@ const ImprovementsBarChart = ({ data }) => (
   </ResponsiveContainer>
 );
 
+// Predefined recommendations for each skill
+const predefinedRecommendations = {
+  Communication: [
+    "Practice active listening to enhance your communication skills.",
+    "Join group discussions to refine your ability to articulate ideas clearly.",
+    "Use your strong communication to lead team projects effectively.",
+  ],
+  Clarity: [
+    "Structure your responses with clear introductions and conclusions.",
+    "Practice summarizing complex ideas to improve clarity.",
+    "Seek feedback on your explanations to ensure they are easy to follow.",
+  ],
+  Confidence: [
+    "Prepare thoroughly for sessions to boost your confidence.",
+    "Practice public speaking to build self-assurance in group settings.",
+    "Leverage your confidence to inspire others in discussions.",
+  ],
+  Engagement: [
+    "Ask open-ended questions to maintain high engagement in conversations.",
+    "Participate in interactive workshops to enhance audience engagement.",
+    "Use your strong engagement to foster collaborative environments.",
+  ],
+  Reasoning: [
+    "Solve logic puzzles regularly to sharpen your reasoning skills.",
+    "Engage in debates to practice structured argumentation.",
+    "Analyze case studies to improve your critical thinking abilities.",
+  ],
+};
+
 export default function Analytics() {
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
@@ -232,6 +282,43 @@ export default function Analytics() {
         }
         const data = await response.json();
 
+        // Ensure all parameters are included
+        const skills = [
+          { subject: "Communication", score: data.averageCommunication || 0 },
+          { subject: "Clarity", score: data.averageClarity || 0 },
+          { subject: "Confidence", score: data.averageConfidence || 0 },
+          { subject: "Engagement", score: data.averageEngagement || 0 },
+          { subject: "Reasoning", score: data.averageReasoning || 0 },
+        ];
+
+        // Sort skills to find top 2 strengths and bottom 2 improvements
+        const sortedSkills = [...skills].sort((a, b) => b.score - a.score);
+        const strengthAreas = sortedSkills.slice(0, 2).map((skill) => ({
+          area: skill.subject,
+          score: skill.score,
+        }));
+        const improvementAreas = sortedSkills.slice(-2).map((skill) => ({
+          area: skill.subject,
+          score: skill.score,
+        }));
+
+        // Generate recommendations based on strengths and improvements
+        const recommendations = [];
+        // Add one recommendation for each improvement area
+        improvementAreas.forEach((area) => {
+          const recs = predefinedRecommendations[area.area];
+          if (recs && recs.length > 0) {
+            recommendations.push(recs[0]); // First recommendation for improvement
+          }
+        });
+        // Add one recommendation for one strength to leverage it
+        if (strengthAreas.length > 0) {
+          const recs = predefinedRecommendations[strengthAreas[0].area];
+          if (recs && recs.length > 2) {
+            recommendations.push(recs[2]); // Third recommendation for leveraging strength
+          }
+        }
+
         // Transform API data to match expected structure
         const transformedData = {
           averageCommunication: data.averageCommunication || 0,
@@ -240,33 +327,11 @@ export default function Analytics() {
           averageEngagement: data.averageEngagement || 0,
           averageReasoning: data.averageReasoning || 0,
           totalSessions: data.totalSessions || 0,
-          skillsRadar: [
-            {
-              subject: "Communication",
-              score: data.averageCommunication || 0,
-              fullMark: 5,
-            },
-            {
-              subject: "Clarity",
-              score: data.averageClarity || 0,
-              fullMark: 5,
-            },
-            {
-              subject: "Confidence",
-              score: data.averageConfidence || 0,
-              fullMark: 5,
-            },
-            {
-              subject: "Engagement",
-              score: data.averageEngagement || 0,
-              fullMark: 5,
-            },
-            {
-              subject: "Reasoning",
-              score: data.averageReasoning || 0,
-              fullMark: 5,
-            },
-          ],
+          skillsRadar: skills.map((skill) => ({
+            subject: skill.subject,
+            score: skill.score,
+            fullMark: 5,
+          })),
           trend: data.trend.map((t) => ({
             id: t.sessionId,
             sessionTopic: `Session ${t.sessionId}`,
@@ -277,19 +342,21 @@ export default function Analytics() {
             engagement: t.engagement,
             reasoning: t.reasoning,
           })),
-          improvementAreas: [
-            { area: "Clarity", score: data.averageClarity || 0 },
-            { area: "Reasoning", score: data.averageReasoning || 0 },
-          ],
-          strengthAreas: [
-            { area: "Communication", score: data.averageCommunication || 0 },
-            { area: "Engagement", score: data.averageEngagement || 0 },
-          ],
+          improvementAreas,
+          strengthAreas,
+          sessionsOverTime: [
+            { name: "Jan", sessions: 5 },
+            { name: "Feb", sessions: 8 },
+            { name: "Mar", sessions: 12 },
+            { name: "Apr", sessions: 10 },
+          ], // Example data; replace with real API data if available
+          recommendations, // Include predefined recommendations
         };
 
         setAnalytics(transformedData);
         setLoading(false);
       } catch (error) {
+        console.error("Error fetching analytics:", error);
         toast.error("Failed to load analytics");
         setLoading(false);
       }
@@ -345,21 +412,21 @@ export default function Analytics() {
 
       {/* Stars background */}
       <div className="fixed inset-0 z-0">
-          {stars.map((star) => (
-            <div
-              key={star.id}
-              className={`absolute rounded-full bg-white ${star.blinking ? 'animate-pulse' : ''}`}
-              style={{
-                left: `${star.x}%`,
-                top: `${star.y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                opacity: star.opacity,
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          ))}
-        </div>
+        {stars.map((star) => (
+          <div
+            key={star.id}
+            className={`absolute rounded-full bg-white ${star.blinking ? "animate-pulse" : ""}`}
+            style={{
+              left: `${star.x}%`,
+              top: `${star.y}%`,
+              width: `${star.size}px`,
+              height: `${star.size}px`,
+              opacity: star.opacity,
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        ))}
+      </div>
 
       <div className="container mx-auto px-4 py-12 relative z-10">
         {/* Main content card */}
@@ -450,24 +517,24 @@ export default function Analytics() {
                             <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
                               {analytics.averageClarity.toFixed(1)}
                             </p>
-                            </div>
-                            <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
+                          </div>
+                          <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
                             <p className="text-gray-400 text-sm">
                               Average Confidence
                             </p>
                             <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
                               {analytics.averageConfidence.toFixed(1)}
                             </p>
-                            </div>
-                            <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
+                          </div>
+                          <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
                             <p className="text-gray-400 text-sm">
                               Average Engagement
                             </p>
                             <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
                               {analytics.averageEngagement.toFixed(1)}
                             </p>
-                            </div>
-                            <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
+                          </div>
+                          <div className="bg-[#0f0f1a]/60 p-4 rounded-lg border border-purple-500/10">
                             <p className="text-gray-400 text-sm">
                               Average Reasoning
                             </p>
@@ -475,8 +542,7 @@ export default function Analytics() {
                               {analytics.averageReasoning.toFixed(1)}
                             </p>
                           </div>
-                          </div>
-                          
+                        </div>
 
                         <div className="h-80 w-full">
                           <p className="text-lg font-medium mb-4">
@@ -595,18 +661,13 @@ export default function Analytics() {
                             Personalized Recommendations
                           </p>
                           <ul className="list-disc list-inside space-y-2 text-gray-300">
-                            <li>
-                              Focus on improving clarity by practicing more
-                              structured responses in your next sessions.
-                            </li>
-                            <li>
-                              Consider joining specialized sessions on logical
-                              reasoning to strengthen your analytical skills.
-                            </li>
-                            <li>
-                              Continue leveraging your strong engagement skills
-                              by participating in more group discussions.
-                            </li>
+                            {analytics.recommendations.length > 0 ? (
+                              analytics.recommendations.map((rec, index) => (
+                                <li key={index}>{rec}</li>
+                              ))
+                            ) : (
+                              <li>No recommendations available.</li>
+                            )}
                           </ul>
                         </div>
                       </motion.div>
