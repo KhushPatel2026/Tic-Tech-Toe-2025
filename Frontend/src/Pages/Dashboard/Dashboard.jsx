@@ -138,6 +138,43 @@ function Dashboard() {
                   Manage your sessions, track your progress, and enhance your communication skills.
                 </motion.p>
 
+                {/*Section to redirect to Mock GD and Mock Interview powered by AI*/}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-10 mb-12">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gradient-to-tr from-blue-600 to-purple-600 p-8 rounded-3xl shadow-xl cursor-pointer transition-all duration-300"
+                    onClick={() => navigate('/mock-gd')}
+                  >
+                    <h3 className="text-2xl font-bold text-white mb-4">Mock Group Discussion</h3>
+                    <p className="text-gray-300 leading-relaxed">
+                      Practice group discussions with AI-powered feedback to improve your communication and reasoning skills.
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gradient-to-tr from-yellow-600 to-orange-600 p-8 rounded-3xl shadow-xl cursor-pointer transition-all duration-300"
+                    onClick={() => navigate('/ai-interview')}
+                  >
+                    <h3 className="text-2xl font-bold text-white mb-4">Mock AI Interview</h3>
+                    <p className="text-gray-300 leading-relaxed">
+                      Prepare for interviews with AI-driven questions and personalized feedback to boost your confidence.
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gradient-to-tr from-purple-700 to-pink-700 p-8 rounded-3xl shadow-xl cursor-pointer transition-all duration-300"
+                    onClick={() => navigate('/mock-analytics')}
+                  >
+                    <h3 className="text-2xl font-bold text-white mb-4">Mock Analytics</h3>
+                    <p className="text-gray-300 leading-relaxed">
+                      Dive into detailed analytics of your mock sessions to track progress and identify areas for improvement.
+                    </p>
+                  </motion.div>
+                </div>          
+
                 {/* Create Session Button for Moderators */}
                 {user?.role === 'Moderator' && (
                   <motion.div
