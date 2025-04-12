@@ -1,5 +1,5 @@
 require('dotenv').config();
-const express=require('express'),cors=require('cors'),mongoose=require('mongoose'),cookieParser=require('cookie-parser'),session=require('express-session'),passport=require('./utils/passportConfig'),http=require('http'),socketIo=require('socket.io'),authRoutes=require('./routes/authRoutes'),sessionRoutes=require('./routes/sessionRoutes'),feedbackRoutes=require('./routes/feedbackRoutes'),socialAuthRoutes=require('./Routes/socialAuthRoutes'),Session=require('./model/Session'),Message=require('./model/Message'),{RtcTokenBuilder,RtcRole}=require('agora-access-token'),checkAbusiveWords=require('./Utils/abusiveWords'),{GoogleGenerativeAI}=require('@google/generative-ai');
+const express=require('express'),cors=require('cors'),mongoose=require('mongoose'),cookieParser=require('cookie-parser'),session=require('express-session'),passport=require('./utils/passportConfig'),http=require('http'),socketIo=require('socket.io'),authRoutes=require('./routes/authRoutes'),sessionRoutes=require('./routes/sessionRoutes'),feedbackRoutes=require('./routes/feedbackRoutes'),socialAuthRoutes=require('./Routes/socialAuthRoutes'),mockGDRoutes=require('./Routes/mockGDRoutes'),aiInterviewRoutes=require('./Routes/aiinterviewRoutes'),Session=require('./model/Session'),Message=require('./model/Message'),{RtcTokenBuilder,RtcRole}=require('agora-access-token'),checkAbusiveWords=require('./Utils/abusiveWords'),{GoogleGenerativeAI}=require('@google/generative-ai');
 const app=express(),server=http.createServer(app),io=socketIo(server,{cors:{origin:'http://localhost:5173',methods:['GET','POST'],credentials:true},transports:['websocket','polling'],pingTimeout:60000,pingInterval:25000});
 app.use(cors({origin:'http://localhost:5173',credentials:true}));
 app.use(express.json());
@@ -11,6 +11,8 @@ mongoose.connect(process.env.MONGO_URL).then(()=>console.log('MongoDB connection
 app.use('/api/auth',authRoutes);
 app.use('/api/sessions',sessionRoutes);
 app.use('/api/feedback',feedbackRoutes);
+app.use('/api/ai-interview',aiInterviewRoutes);
+app.use('/api/mock-gd',mockGDRoutes);
 app.use('/auth',socialAuthRoutes);
 server.on('error',error=>console.error('Server error:',error));
 

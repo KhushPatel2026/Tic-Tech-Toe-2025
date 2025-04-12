@@ -11,6 +11,9 @@ import SessionRoom from './Pages/SessionRoom/SessionRoom';
 import FeedbackForm from './Pages/FeedbackForm/feedbackForm';
 import FeedbackHistory from './Pages/FeedbackHistory/FeedBackHistory';
 import Analytics from './Pages/Analytics/Analytics';
+import AIInterviewPrep from './Pages/AIInterview/AiInterview';
+import MockGD from './Pages/MockGD/MockGD';
+import MockDataAnalyticsPage from './Pages/MockAnalytics/MockAnalytics'
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -73,6 +76,10 @@ function App() {
         <Route path="/feedback/:sessionId" element={<ProtectedRoute><FeedbackForm /></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><FeedbackHistory /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+        <Route path="/ai-interview" element={<ProtectedRoute><AIInterviewPrep /></ProtectedRoute>} />
+        <Route path="/mock-gd" element={<ProtectedRoute><MockGD /></ProtectedRoute>} />
+        <Route path="/mock-analytics" element={<ProtectedRoute><MockDataAnalyticsPage /></ProtectedRoute>} />
+        <Route path="*" element={<LandingPage />} />
       </Routes>
       <button onClick={() => localStorage.clear() & navigate('/')} className="absolute top-4 right-4 py-2 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all duration-300">Logout</button>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="dark" />
