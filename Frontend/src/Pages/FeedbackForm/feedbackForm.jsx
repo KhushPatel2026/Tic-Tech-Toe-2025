@@ -96,6 +96,8 @@ export default function FeedbackForm() {
       toast.error("Failed to submit feedback");
     }
   }
+  const [stars, setStars] = useState([]);
+
   // Generate stars for background
   useEffect(() => {
     const generateStars = () => {
