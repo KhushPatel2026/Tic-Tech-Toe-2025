@@ -20,13 +20,9 @@ const createSession = async (req, res) => {
 const getSessions = async (req, res) => {
   const sessions = await Session.find().populate('moderatorId', 'name email').populate('participants', 'name email').populate('evaluators', 'name email');
   if (!sessions) return res.status(404).json({ error: 'No sessions found' });
-  //Filter session based on status
   const filteredSessions = sessions.filter(session => session.status !== 'ended');
-  //Sort sessions based on start time
   filteredSessions.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-  //Limit to 10 sessions
   const limitedSessions = filteredSessions.slice(0, 10);
-  //Format session data
   res.json(limitedSessions);
 };
 
