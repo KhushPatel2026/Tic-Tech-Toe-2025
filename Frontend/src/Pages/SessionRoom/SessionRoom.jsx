@@ -726,7 +726,7 @@ function SessionRoom() {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-white flex items-center">
                       <span className="bg-gradient-to-r from-pink-500 to-purple-500 h-5 w-1 rounded mr-2"></span>
-                      Gemini AI Assistant
+                      AI Assistant
                     </h3>
                     <motion.button
                       onClick={() => setChatbotOpen(false)}
@@ -751,7 +751,7 @@ function SessionRoom() {
                       value={chatbotQuery}
                       onChange={(e) => setChatbotQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleChatbotSubmit()}
-                      placeholder="Ask Gemini..."
+                      placeholder="Ask AI..."
                       className="flex-1 px-4 py-2 bg-[#1e1129]/50 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
                       disabled={isLoadingResponse}
                     />
