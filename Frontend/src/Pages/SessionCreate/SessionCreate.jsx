@@ -195,15 +195,6 @@ function SessionCreate() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.8 }}
                   >
-                    <label className="flex items-center gap-2 text-white">
-                      <input
-                        type="checkbox"
-                        checked={isAIPractice}
-                        onChange={(e) => setIsAIPractice(e.target.checked)}
-                        className="w-5 h-5 accent-pink-500"
-                      />
-                      AI Practice Session
-                    </label>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
