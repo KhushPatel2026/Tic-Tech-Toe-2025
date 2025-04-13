@@ -19,7 +19,11 @@ const createSession = async (req, res) => {
 
 const getSessions = async (req, res) => {
   const sessions = await Session.find().populate('moderatorId', 'name email').populate('participants', 'name email').populate('evaluators', 'name email');
-  res.json(sessions);
+  if (!sessions) return res.status(404).json({ error: 'No sessions found' });
+  const filteredSessions = sessions.filter(session => session.status !== 'ended');
+  filteredSessions.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+  const limitedSessions = filteredSessions.slice(0, 10);
+  res.json(limitedSessions);
 };
 
 const getSessionById = async (req, res) => {
