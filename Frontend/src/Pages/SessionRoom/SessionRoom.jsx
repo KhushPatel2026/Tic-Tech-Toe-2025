@@ -1,16 +1,26 @@
-import {useState, useEffect, useRef, useCallback} from 'react';
-import {useParams, useNavigate} from 'react-router-dom';
-import {ToastContainer, toast} from 'react-toastify';
+// src/pages/SessionRoom.jsx
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, ChevronRight, Send, Bot, LogOut, X } from 'lucide-react';
 import io from 'socket.io-client';
 import AgoraRTC from 'agora-rtc-sdk-ng';
-import {GoogleGenerativeAI} from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import 'react-toastify/dist/ReactToastify.css';
 
-const socket = io('http://localhost:3000', {withCredentials: true, reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000, transports: ['websocket', 'polling']});
+const socket = io('http://localhost:3000', {
+  withCredentials: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  transports: ['websocket', 'polling'],
+});
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
 function SessionRoom() {
-  const {id} = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
@@ -22,6 +32,7 @@ function SessionRoom() {
   const [chatbotQuery, setChatbotQuery] = useState('');
   const [chatbotResponse, setChatbotResponse] = useState('');
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  const [stars, setStars] = useState([]);
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const clientRef = useRef(null);
   const audioTrackRef = useRef(null);
@@ -30,14 +41,32 @@ function SessionRoom() {
   const attemptedJoinRef = useRef(false);
   const voiceTokenRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const lastMessageRef = useRef(null);
   const modelRef = useRef(null);
 
-  // Initialize Gemini only when the chatbot is opened
+  // Generate stars for background (from Dashboard)
+  useEffect(() => {
+    const generateStars = () => {
+      const newStars = [];
+      for (let i = 0; i < 100; i++) {
+        newStars.push({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 2 + 1,
+          opacity: Math.random() * 0.8 + 0.2,
+          blinking: Math.random() > 0.7,
+        });
+      }
+      setStars(newStars);
+    };
+    generateStars();
+  }, []);
+
+  // Initialize Gemini
   const initGemini = useCallback(() => {
     if (!modelRef.current && chatbotOpen) {
       try {
-        modelRef.current = genAI.getGenerativeModel({model: "gemini-2.0-flash"});
+        modelRef.current = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
         console.log('Gemini model initialized');
       } catch (error) {
         console.error('Gemini init error:', error);
@@ -46,76 +75,85 @@ function SessionRoom() {
     }
   }, [chatbotOpen]);
 
-  const askGeminiChatbot = useCallback(async(query) => {
-    if (!query.trim()) return;
-    
-    // Initialize model if not already done
-    if (!modelRef.current) {
-      try {
-        modelRef.current = genAI.getGenerativeModel({model: "gemini-2.0-flash"});
-      } catch (error) {
-        console.error('Gemini init error:', error);
-        toast.error('Failed to initialize Gemini AI');
-        return;
+  // Ask Gemini Chatbot
+  const askGeminiChatbot = useCallback(
+    async (query) => {
+      if (!query.trim()) return;
+      if (!modelRef.current) {
+        try {
+          modelRef.current = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        } catch (error) {
+          console.error('Gemini init error:', error);
+          toast.error('Failed to initialize Gemini AI');
+          return;
+        }
       }
-    }
-    
-    setIsLoadingResponse(true);
-    try {
-      const sessionInfo = session ? 
-        `Current group discussion topic: ${session.topic || 'Unknown'}\nParticipants: ${session.participants?.map(p => p.name).join(', ') || 'Unknown'}` : 
-        'No session information available';
-      const chatHistory = messages.slice(-10).map(m => `${m.username}: ${m.message}`).join('\n');
-      const prompt = `You are an AI assistant helping with a group discussion. Here's information about the current discussion: ${sessionInfo}\n\nRecent chat history:\n${chatHistory}\n\nThe user is asking: ${query}\n\nProvide a helpful, concise response relevant to the group discussion context. Be friendly and encouraging. Keep your response under 150 words.`;
-      const result = await modelRef.current.generateContent(prompt);
-      const response = await result.response;
-      setChatbotResponse(response.text());
-    } catch (error) {
-      console.error('Gemini chatbot error:', error);
-      setChatbotResponse('Sorry, I encountered an error processing your request. Please try again.');
-    } finally {
-      setIsLoadingResponse(false);
-    }
-  }, [messages, session]);
+      setIsLoadingResponse(true);
+      try {
+        const sessionInfo = session
+          ? `Current group discussion topic: ${session.topic || 'Unknown'}\nParticipants: ${
+              session.participants?.map((p) => p.name).join(', ') || 'Unknown'
+            }`
+          : 'No session information available';
+        const chatHistory = messages
+          .slice(-10)
+          .map((m) => `${m.username}: ${m.message}`)
+          .join('\n');
+        const prompt = `You are an AI assistant helping with a group discussion. Here's information about the current discussion: ${sessionInfo}\n\nRecent chat history:\n${chatHistory}\n\nThe user is asking: ${query}\n\nProvide a helpful, concise response relevant to the group discussion context. Be friendly and encouraging. Keep your response under 150 words.`;
+        const result = await modelRef.current.generateContent(prompt);
+        const response = await result.response;
+        setChatbotResponse(response.text());
+      } catch (error) {
+        console.error('Gemini chatbot error:', error);
+        setChatbotResponse('Sorry, I encountered an error processing your request. Please try again.');
+      } finally {
+        setIsLoadingResponse(false);
+      }
+    },
+    [messages, session]
+  );
 
-  const initAgora = useCallback(async() => {
+  // Initialize Agora
+  const initAgora = useCallback(async () => {
     try {
-      if(!clientRef.current) {
-        clientRef.current = AgoraRTC.createClient({mode: 'rtc', codec: 'vp8'});
+      if (!clientRef.current) {
+        clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         clientRef.current.enableAudioVolumeIndicator();
-        clientRef.current.on('user-published', async(user, mediaType) => {
-          if(mediaType === 'audio') {
+        clientRef.current.on('user-published', async (user, mediaType) => {
+          if (mediaType === 'audio') {
             try {
               await clientRef.current.subscribe(user, mediaType);
               console.log('Subscribed to user:', user.uid);
-              if(user.audioTrack) {
+              if (user.audioTrack) {
                 user.audioTrack.setVolume(100);
                 user.audioTrack.play();
                 console.log('Playing audio for user:', user.uid);
               } else {
                 console.warn('No audio track available for user:', user.uid);
               }
-            } catch(err) {
+            } catch (err) {
               console.error('Subscribe/play error:', err);
               toast.error('Failed to play audio: ' + err.message);
             }
           }
         });
-        clientRef.current.on('user-unpublished', user => { console.log('User unpublished:', user.uid); });
-        clientRef.current.on('volume-indicator', volumes => {
-          const speaker = volumes.find(v => v.level > 10);
-          if(speaker && session) {
+        clientRef.current.on('user-unpublished', (user) => {
+          console.log('User unpublished:', user.uid);
+        });
+        clientRef.current.on('volume-indicator', (volumes) => {
+          const speaker = volumes.find((v) => v.level > 10);
+          if (speaker && session) {
             let speakerName = null;
             const stringUid = String(speaker.uid);
-            const participant = session.participants?.find(p => String(p._id) === stringUid);
-            if(participant) {
+            const participant = session.participants?.find((p) => String(p._id) === stringUid);
+            if (participant) {
               speakerName = participant.name || `Participant ${stringUid}`;
             } else {
-              const evaluator = session.evaluators?.find(e => String(e._id) === stringUid);
-              if(evaluator) {
+              const evaluator = session.evaluators?.find((e) => String(e._id) === stringUid);
+              if (evaluator) {
                 speakerName = evaluator.name || `Evaluator ${stringUid}`;
-              } else if(String(session.moderatorId) === stringUid) {
-                speakerName = session.moderatorName || "Moderator";
+              } else if (String(session.moderatorId) === stringUid) {
+                speakerName = session.moderatorName || 'Moderator';
               } else {
                 speakerName = `User ${stringUid}`;
               }
@@ -125,42 +163,51 @@ function SessionRoom() {
             setActiveSpeaker(null);
           }
         });
-        clientRef.current.on('connection-state-change', state => { console.log('Agora connection state:', state); });
-        clientRef.current.on('exception', event => { console.error('Agora exception:', event); });
+        clientRef.current.on('connection-state-change', (state) => {
+          console.log('Agora connection state:', state);
+        });
+        clientRef.current.on('exception', (event) => {
+          console.error('Agora exception:', event);
+        });
       }
-    } catch(err) {
+    } catch (err) {
       console.error('Agora init error:', err);
       toast.error('Failed to initialize audio: ' + err.message);
     }
   }, [session]);
 
-  const fetchSessionAndChat = useCallback(async() => {
+  // Fetch Session and Chat
+  const fetchSessionAndChat = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      if(!token) {
+      if (!token) {
         toast.error('Authentication required');
         navigate('/login');
         return;
       }
-      const response = await fetch(`http://localhost:3000/api/sessions/${id}`, {headers: {Authorization: `Bearer ${token}`}});
+      const response = await fetch(`http://localhost:3000/api/sessions/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
-      if(response.ok) {
+      if (response.ok) {
         setSession(data);
         const startTime = new Date(data.startTime).getTime();
         const durationMs = data.duration * 60 * 1000;
         const endTime = startTime + durationMs;
         const now = Date.now();
         setTimeLeft(endTime > now ? Math.floor((endTime - now) / 1000) : 0);
-        const chatResponse = await fetch(`http://localhost:3000/api/sessions/${id}/chat`, {headers: {Authorization: `Bearer ${token}`}});
+        const chatResponse = await fetch(`http://localhost:3000/api/sessions/${id}/chat`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const chatData = await chatResponse.json();
-        if(chatResponse.ok) {
+        if (chatResponse.ok) {
           const messagesArray = Array.isArray(chatData) ? chatData : [];
           setMessages(messagesArray);
         } else {
           console.error('Chat fetch error:', chatData);
           toast.error('Failed to load chat history');
         }
-        if(socketConnectedRef.current && !joinedRoomRef.current) {
+        if (socketConnectedRef.current && !joinedRoomRef.current) {
           joinRoom();
         }
       } else {
@@ -168,66 +215,89 @@ function SessionRoom() {
         toast.error(data.error || 'Session not found');
         navigate('/dashboard');
       }
-    } catch(error) {
+    } catch (error) {
       console.error('Fetch error:', error);
       toast.error('Failed to load session');
       navigate('/dashboard');
     }
   }, [id, navigate]);
 
+  // Join Room
   const joinRoom = useCallback(() => {
-    if(!joinedRoomRef.current && !attemptedJoinRef.current) {
+    if (!joinedRoomRef.current && !attemptedJoinRef.current) {
       console.log('Joining room', id);
       attemptedJoinRef.current = true;
-      socket.emit('join-room', {sessionId: id, userId: user.id, role: user.role || 'Guest'});
+      socket.emit('join-room', { sessionId: id, userId: user.id, role: user.role || 'Guest' });
       joinedRoomRef.current = true;
     }
   }, [id, user.id, user.role]);
 
-  const joinVoiceChannel = useCallback(async(token, channel, uid) => {
-    try {
-      if(!clientRef.current) throw new Error('Agora client not initialized');
-      console.log('Joining Agora with params:', {appId: import.meta.env.VITE_AGORA_APP_ID, channel, token, uid});
-      const numericUid = typeof uid === 'number' ? uid : (parseInt(uid, 10) || Math.floor(Math.random() * 999000) + 1000);
-      await clientRef.current.join(import.meta.env.VITE_AGORA_APP_ID, channel, token, numericUid);
-      console.log('Joined Agora channel:', channel, 'as uid:', numericUid);
-      if(!audioTrackRef.current) {
-        audioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack({encoderConfig: 'speech_standard', AEC: true, ANS: true});
-        console.log('Audio track created');
+  // Join Voice Channel
+  const joinVoiceChannel = useCallback(
+    async (token, channel, uid) => {
+      try {
+        if (!clientRef.current) throw new Error('Agora client not initialized');
+        console.log('Joining Agora with params:', {
+          appId: import.meta.env.VITE_AGORA_APP_ID,
+          channel,
+          token,
+          uid,
+        });
+        const numericUid = typeof uid === 'number' ? uid : parseInt(uid, 10) || Math.floor(Math.random() * 999000) + 1000;
+        await clientRef.current.join(import.meta.env.VITE_AGORA_APP_ID, channel, token, numericUid);
+        console.log('Joined Agora channel:', channel, 'as uid:', numericUid);
+        if (!audioTrackRef.current) {
+          audioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack({
+            encoderConfig: 'speech_standard',
+            AEC: true,
+            ANS: true,
+          });
+          console.log('Audio track created');
+        }
+        await clientRef.current.publish(audioTrackRef.current);
+        console.log('Audio track published');
+        setIsVoiceOn(true);
+      } catch (error) {
+        console.error('Voice join error:', error);
+        toast.error('Failed to join voice: ' + error.message);
+        setIsVoiceOn(false);
       }
-      await clientRef.current.publish(audioTrackRef.current);
-      console.log('Audio track published');
-      setIsVoiceOn(true);
-    } catch(error) {
-      console.error('Voice join error:', error);
-      toast.error('Failed to join voice: ' + error.message);
-      setIsVoiceOn(false);
-    }
-  }, []);
+    },
+    []
+  );
 
-  const leaveVoiceRoom = useCallback(async() => {
-    if(!isVoiceOn) return;
+  // Leave Voice Room
+  const leaveVoiceRoom = useCallback(async () => {
+    if (!isVoiceOn) return;
     console.log('Leaving voice room');
     try {
-      socket.emit('leave-voice-room', {sessionId: id, userId: user.id});
-      if(audioTrackRef.current) {
+      socket.emit('leave-voice-room', { sessionId: id, userId: user.id });
+      if (audioTrackRef.current) {
         try {
-          if(clientRef.current) await clientRef.current.unpublish(audioTrackRef.current);
+          if (clientRef.current) await clientRef.current.unpublish(audioTrackRef.current);
           audioTrackRef.current.close();
           audioTrackRef.current = null;
-        } catch(err) { console.error('Error unpublishing audio track:', err); }
+        } catch (err) {
+          console.error('Error unpublishing audio track:', err);
+        }
       }
-      if(clientRef.current) {
-        try { await clientRef.current.leave(); } 
-        catch(err) { console.error('Error leaving Agora channel:', err); }
+      if (clientRef.current) {
+        try {
+          await clientRef.current.leave();
+        } catch (err) {
+          console.error('Error leaving Agora channel:', err);
+        }
       }
       setIsVoiceOn(false);
       setActiveSpeaker(null);
-    } catch(error) { console.error('Error leaving voice room:', error); }
+    } catch (error) {
+      console.error('Error leaving voice room:', error);
+    }
   }, [id, isVoiceOn, user.id]);
 
+  // Send Message
   const handleSendMessage = useCallback(() => {
-    if(!message.trim()) return;
+    if (!message.trim()) return;
     console.log('Sending message:', message);
     const messageObj = {
       sessionId: id,
@@ -235,90 +305,106 @@ function SessionRoom() {
       username: user.name || 'Guest',
       role: user.role || 'Guest',
       message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
     socket.emit('send-message', messageObj);
     setMessage('');
   }, [id, message, user.id, user.name, user.role]);
 
-  const handleVoiceToggle = useCallback(async() => {
+  // Toggle Voice
+  const handleVoiceToggle = useCallback(async () => {
     try {
-      if(isVoiceOn) {
+      if (isVoiceOn) {
         await leaveVoiceRoom();
       } else {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-          stream.getTracks().forEach(track => track.stop());
-          socket.emit('join-voice-room', {sessionId: id, userId: user.id});
-        } catch(permError) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+          socket.emit('join-voice-room', { sessionId: id, userId: user.id });
+        } catch (permError) {
           console.error('Microphone permission error:', permError);
           toast.error('Microphone access denied. Please allow microphone access in your browser settings.');
         }
       }
-    } catch(error) {
+    } catch (error) {
       console.error('Voice toggle error:', error);
       toast.error('Failed to toggle voice: ' + error.message);
     }
   }, [id, isVoiceOn, leaveVoiceRoom, user.id]);
 
-  const handleEndSession = useCallback(async() => {
+  // End Session
+  const handleEndSession = useCallback(async () => {
     try {
       console.log('Ending session');
       const response = await fetch(`http://localhost:3000/api/sessions/${id}/end`, {
         method: 'PATCH',
-        headers: {Authorization: `Bearer ${localStorage.getItem('token')}`}
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-      if(!response.ok) {
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to end session');
       }
-      socket.emit('end-session', {sessionId: id});
+      socket.emit('end-session', { sessionId: id });
       setTimeout(() => navigate('/dashboard'), 1500);
-    } catch(error) {
+    } catch (error) {
       console.error('End session error:', error);
       toast.error(error.message || 'Failed to end session');
     }
   }, [id, navigate]);
 
-  const handleLeaveRoom = useCallback(async() => {
-    if(isVoiceOn) await leaveVoiceRoom();
-    socket.emit('leave-room', {sessionId: id});
+  // Leave Room
+  const handleLeaveRoom = useCallback(async () => {
+    if (isVoiceOn) await leaveVoiceRoom();
+    socket.emit('leave-room', { sessionId: id });
     navigate('/dashboard');
   }, [id, isVoiceOn, leaveVoiceRoom, navigate]);
 
+  // Chatbot Submit
   const handleChatbotSubmit = useCallback(() => {
     if (!chatbotQuery.trim()) return;
     askGeminiChatbot(chatbotQuery);
     setChatbotQuery('');
   }, [chatbotQuery, askGeminiChatbot]);
 
+  // Auto-scroll chat
   useEffect(() => {
-    if(chatContainerRef.current) chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
+  // Initialize Agora and Gemini
   useEffect(() => {
     initAgora();
-    // Only initialize Gemini when chatbot is opened
     if (chatbotOpen) {
       initGemini();
     }
-    return() => { leaveVoiceRoom(); };
+    return () => {
+      leaveVoiceRoom();
+    };
   }, [initAgora, leaveVoiceRoom, initGemini, chatbotOpen]);
 
-  useEffect(() => { fetchSessionAndChat(); }, [fetchSessionAndChat]);
-
+  // Fetch session
   useEffect(() => {
-    if(timeLeft === null) return;
-    if(timeLeft <= 0 && session?.status === 'active') handleEndSession();
-    const timer = setInterval(() => { setTimeLeft(prev => prev > 0 ? prev - 1 : 0); }, 1000);
-    return() => clearInterval(timer);
+    fetchSessionAndChat();
+  }, [fetchSessionAndChat]);
+
+  // Timer
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft <= 0 && session?.status === 'active') handleEndSession();
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [timeLeft, session, handleEndSession]);
 
+  // Socket Events
   useEffect(() => {
     function handleConnect() {
       console.log('Socket connected:', socket.id);
       socketConnectedRef.current = true;
-      if(session && !joinedRoomRef.current) joinRoom();
+      if (session && !joinedRoomRef.current) joinRoom();
     }
     function handleDisconnect() {
       console.log('Socket disconnected');
@@ -331,20 +417,29 @@ function SessionRoom() {
     }
     function handleNewMessage(msg) {
       console.log('New message:', msg);
-      setMessages(prev => {
-        const exists = prev.some(m => m.userId === msg.userId && m.message === msg.message && new Date(m.timestamp).getTime() === new Date(msg.timestamp).getTime());
+      setMessages((prev) => {
+        const exists = prev.some(
+          (m) =>
+            m.userId === msg.userId &&
+            m.message === msg.message &&
+            new Date(m.timestamp).getTime() === new Date(msg.timestamp).getTime()
+        );
         if (!exists) {
-          return [...prev, {...msg}];
+          return [...prev, { ...msg }];
         }
         return prev;
       });
     }
     function handleAiMessage(msg) {
       console.log('AI message:', msg);
-      setMessages(prev => [...prev, {...msg}]);
+      setMessages((prev) => [...prev, { ...msg }]);
     }
-    function handleUserJoined({userId}) { toast.info(`User ${userId} joined`); }
-    function handleUserRemoved({userId}) { toast.warn(`User ${userId} removed`); }
+    function handleUserJoined({ userId }) {
+      toast.info(`User ${userId} joined`);
+    }
+    function handleUserRemoved({ userId }) {
+      toast.warn(`User ${userId} removed`);
+    }
     function handleError(err) {
       console.error('Socket error:', err);
       toast.error(err);
@@ -358,7 +453,7 @@ function SessionRoom() {
       voiceTokenRef.current = tokenData;
       joinVoiceChannel(tokenData.token, tokenData.channel, tokenData.uid);
     }
-    
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('connect_error', handleConnectError);
@@ -369,13 +464,13 @@ function SessionRoom() {
     socket.on('error', handleError);
     socket.on('session-ended', handleEndSession);
     socket.on('voice-token', handleVoiceToken);
-    
-    if(socket.connected && !joinedRoomRef.current) {
+
+    if (socket.connected && !joinedRoomRef.current) {
       socketConnectedRef.current = true;
       joinRoom();
     }
-    
-    return() => {
+
+    return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
@@ -389,94 +484,324 @@ function SessionRoom() {
     };
   }, [navigate, session, joinRoom, joinVoiceChannel]);
 
-  const formatTime = seconds => `${Math.floor(seconds / 60)}:${seconds % 60 < 10 ? '0' : ''}${seconds % 60}`;
+  const formatTime = (seconds) => {
+    if (seconds === null) return '';
+    return `${Math.floor(seconds / 60)}:${seconds % 60 < 10 ? '0' : ''}${seconds % 60}`;
+  };
 
-  return(
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-4 md:p-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 bg-gradient-to-r from-gray-200 to-white bg-clip-text text-transparent">{session?.topic || 'Loading Session...'}</h1>
-        
-        <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-          {activeSpeaker ? (
-            <div className="flex items-center bg-green-800/40 py-2 px-4 rounded-lg border border-green-600/30">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              <span className="text-green-400 font-medium">Speaking: {activeSpeaker}</span>
-            </div>
-          ) : (
-            <div className="flex items-center bg-gray-800/40 py-2 px-4 rounded-lg border border-gray-600/30">
-              <span className="text-gray-400 font-medium">No one speaking</span>
-            </div>
-          )}
-          
-          <div className="text-white">{timeLeft !== null && `Time: ${formatTime(timeLeft)}`}</div>
-        </div>
-        
-        <div ref={chatContainerRef} className="h-80 overflow-y-auto bg-gray-800/50 p-4 rounded-lg mb-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-          {messages.length === 0 ? (
-            <p className="text-gray-400">No messages yet. Start the conversation!</p>
-          ) : (
-            messages.map((msg, idx) => (
-              <div key={idx} className={`p-2 mb-2 rounded-lg ${msg.userId === user.id ? 'bg-blue-900/30 ml-8' : 'bg-gray-700/30 mr-8'} border-l-4 border-l-gray-500`}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-medium text-gray-300">{msg.username} <span className="text-xs text-gray-400">({msg.role})</span></span>
-                  <span className="text-xs text-gray-400">{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                </div>
-                <p className="text-white break-words">{msg.message}</p>
-                {idx === messages.length - 1 && <div ref={lastMessageRef}></div>}
-              </div>
-            ))
-          )}
-        </div>
-        
-        <div className="flex gap-2 mb-4">
-          <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} type="text" placeholder="Type a message" className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-300" />
-          <button onClick={handleSendMessage} className="py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold hover:from-blue-500 hover:to-blue-700 transition-all duration-300">Send</button>
-        </div>
-        
-        <div className="flex flex-wrap gap-3">
-          <button onClick={handleVoiceToggle} className={`py-2 px-4 bg-gradient-to-r ${isVoiceOn ? 'from-green-600 to-green-800' : 'from-gray-600 to-gray-800'} text-white rounded-lg font-semibold hover:opacity-90 transition-all duration-300 flex items-center`}>
-            <span className={`w-2 h-2 rounded-full mr-2 ${isVoiceOn ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></span>
-            {isVoiceOn ? 'Leave Voice' : 'Join Voice'}
-          </button>
-          
-          <button onClick={() => setChatbotOpen(!chatbotOpen)} className="py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:from-purple-500 hover:to-purple-700 transition-all duration-300 flex items-center">
-            <span className="mr-1">AI Assistant</span>
-          </button>
-          
-          {user.role === 'Moderator' && (
-            <button onClick={handleEndSession} className="py-2 px-4 bg-gradient-to-r from-red-600 to-red-800 text-white rounded-lg font-semibold hover:from-red-500 hover:to-red-700 transition-all duration-300">End Session</button>
-          )}
-          
-          {user.role === 'Evaluator' && (
-            <button onClick={() => navigate(`/feedback/${id}`)} className="py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:from-purple-500 hover:to-purple-700 transition-all duration-300">Submit Feedback</button>
-          )}
-          
-          <button onClick={handleLeaveRoom} className="py-2 px-4 bg-gradient-to-r from-gray-600 to-gray-800 text-white rounded-lg font-semibold hover:from-gray-500 hover:to-gray-700 transition-all duration-300">Leave</button>
-        </div>
-        
-        {chatbotOpen && (
-          <div className="mt-4 bg-gray-800/80 border border-gray-700 rounded-lg p-4 shadow-lg">
-            <h3 className="text-xl font-semibold text-white mb-3">Gemini AI Assistant</h3>
-            
-            <div className="bg-gray-900/50 p-3 rounded-lg max-h-40 overflow-y-auto mb-3">
-              {chatbotResponse ? (
-                <p className="text-white">{chatbotResponse}</p>
-              ) : (
-                <p className="text-gray-400">Ask me anything about group discussions or for help with your session!</p>
-              )}
-            </div>
-            
-            <div className="flex gap-2">
-              <input value={chatbotQuery} onChange={e => setChatbotQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChatbotSubmit()} placeholder="Ask Gemini..." className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" disabled={isLoadingResponse} />
-              <button onClick={handleChatbotSubmit} className="py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold hover:from-blue-500 hover:to-blue-700 transition-all duration-300 disabled:opacity-50" disabled={isLoadingResponse || !chatbotQuery.trim()}>
-                {isLoadingResponse ? 'Loading...' : 'Ask'}
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="dark" />
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a18] via-[#150a20] to-[#1a0628] text-white overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 z-0 overflow-hidden">
+        {/* Stars */}
+        {stars.map((star) => (
+          <div
+            key={star.id}
+            className={`absolute rounded-full bg-white ${star.blinking ? 'animate-pulse' : ''}`}
+            style={{
+              left: `${star.x}%`,
+              top: `${star.y}%`,
+              width: `${star.size}px`,
+              height: `${star.size}px`,
+              opacity: star.opacity,
+            }}
+          />
+        ))}
+        {/* Animated gradient orbs */}
+        <motion.div
+          className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-purple-600/20 to-pink-600/20 blur-3xl"
+          animate={{ x: [0, 20, 0], y: [0, -20, 0], opacity: [0.4, 0.6, 0.4] }}
+          transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
+        />
+        <motion.div
+          className="absolute bottom-1/3 left-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-3xl"
+          animate={{ x: [0, -20, 0], y: [0, 20, 0], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 10, repeat: Infinity, repeatType: 'reverse' }}
+        />
       </div>
+
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0f0f1a]/70 border-b border-white/10">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Mic className="h-6 w-6 text-pink-500" />
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-500">
+              SpeakSpace
+            </span>
+          </div>
+          <motion.button
+            onClick={handleLeaveRoom}
+            className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Leave Session</span>
+          </motion.button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="pt-20 pb-24">
+        <div className="container mx-auto px-4">
+          {/* Session Header */}
+          <motion.div
+            className="mb-8 mt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-md border border-white/10 p-6">
+              <div className="absolute -right-12 -top-12 w-40 h-40 bg-pink-500/20 rounded-full blur-2xl"></div>
+              <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-purple-500/20 rounded-full blur-2xl"></div>
+              <div className="relative z-10">
+                <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
+                  {session?.topic || 'Loading Session...'}
+                </h1>
+                <div className="flex flex-wrap items-center gap-4">
+                  {activeSpeaker ? (
+                    <div className="flex items-center space-x-2 bg-green-500/10 py-2 px-4 rounded-lg">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-green-400 font-medium">Speaking: {activeSpeaker}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 bg-gray-500/10 py-2 px-4 rounded-lg">
+                      <span className="text-gray-400 font-medium">No one speaking</span>
+                    </div>
+                  )}
+                  <span className="text-gray-300">{timeLeft !== null && `Time: ${formatTime(timeLeft)}`}</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Chat Section */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="bg-[#13101c] backdrop-blur-sm rounded-xl border border-white/5 p-6 shadow-xl">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+                <span className="bg-gradient-to-r from-pink-500 to-purple-500 h-5 w-1 rounded mr-2"></span>
+                Chat
+              </h2>
+              <div
+                ref={chatContainerRef}
+                className="h-96 overflow-y-auto pr-2 custom-scrollbar"
+              >
+                <AnimatePresence>
+                  {messages.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center h-full"
+                    >
+                      <p className="text-gray-400">No messages yet. Start the conversation!</p>
+                    </motion.div>
+                  ) : (
+                    messages.map((msg, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4 }}
+                        className={`p-4 mb-4 rounded-lg border border-white/5 ${
+                          msg.userId === user.id
+                            ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 ml-8'
+                            : 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 mr-8'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-white">
+                            {msg.username}{' '}
+                            <span className="text-xs text-gray-400">({msg.role})</span>
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(msg.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-white break-words">{msg.message}</p>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  type="text"
+                  placeholder="Type a message"
+                  className="flex-1 px-4 py-3 bg-[#1e1129]/50 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                />
+                <motion.button
+                  onClick={handleSendMessage}
+                  className="px-4 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Send className="h-5 w-5" />
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Controls */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <div className="bg-[#13101c] backdrop-blur-sm rounded-xl border border-white/5 p-6 shadow-xl">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+                <span className="bg-gradient-to-r from-pink-500 to-purple-500 h-5 w-1 rounded mr-2"></span>
+                Controls
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                <motion.button
+                  onClick={handleVoiceToggle}
+                  className={`px-4 py-2 rounded-lg bg-gradient-to-r ${
+                    isVoiceOn ? 'from-green-600 to-green-800' : 'from-gray-600 to-gray-800'
+                  } text-white hover:shadow-lg hover:shadow-green-500/20 transition-all flex items-center`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full mr-2 ${
+                      isVoiceOn ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+                    }`}
+                  ></span>
+                  {isVoiceOn ? 'Leave Voice' : 'Join Voice'}
+                </motion.button>
+                <motion.button
+                  onClick={() => setChatbotOpen(!chatbotOpen)}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Bot className="h-5 w-5 mr-2" />
+                  AI Assistant
+                </motion.button>
+                {user.role === 'Moderator' && (
+                  <motion.button
+                    onClick={handleEndSession}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-800 text-white hover:shadow-lg hover:shadow-red-500/20 transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    End Session
+                  </motion.button>
+                )}
+                {user.role === 'Evaluator' && (
+                  <motion.button
+                    onClick={() => navigate(`/feedback/${id}`)}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Submit Feedback
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Chatbot Panel */}
+          <AnimatePresence>
+            {chatbotOpen && (
+              <motion.div
+                className="mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="bg-[#13101c] backdrop-blur-sm rounded-xl border border-white/5 p-6 shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <span className="bg-gradient-to-r from-pink-500 to-purple-500 h-5 w-1 rounded mr-2"></span>
+                      Gemini AI Assistant
+                    </h3>
+                    <motion.button
+                      onClick={() => setChatbotOpen(false)}
+                      className="p-1 rounded-full bg-gray-500/20 hover:bg-gray-500/40 transition-all"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <X className="h-5 w-5 text-gray-300" />
+                    </motion.button>
+                  </div>
+                  <div className="bg-[#1e1129]/50 p-4 rounded-lg max-h-40 overflow-y-auto mb-4 custom-scrollbar">
+                    {chatbotResponse ? (
+                      <p className="text-white">{chatbotResponse}</p>
+                    ) : (
+                      <p className="text-gray-400">
+                        Ask me anything about group discussions or for help with your session!
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={chatbotQuery}
+                      onChange={(e) => setChatbotQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleChatbotSubmit()}
+                      placeholder="Ask Gemini..."
+                      className="flex-1 px-4 py-2 bg-[#1e1129]/50 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                      disabled={isLoadingResponse}
+                    />
+                    <motion.button
+                      onClick={handleChatbotSubmit}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      disabled={isLoadingResponse || !chatbotQuery.trim()}
+                    >
+                      {isLoadingResponse ? 'Loading...' : 'Ask'}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Custom styles for scrollbar */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      `}</style>
+
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </div>
   );
 }
