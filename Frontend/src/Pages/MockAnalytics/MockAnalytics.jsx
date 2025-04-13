@@ -17,8 +17,8 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-import { motion } from "framer-motion";
-import { BarChart2, ChevronLeft, ChevronRight, ArrowRight, Users, Mic } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { BarChart2, ChevronLeft, ChevronRight, ArrowLeft, Users, Mic } from "lucide-react";
 
 export default function MockDataAnalyticsPage() {
   const navigate = useNavigate();
@@ -126,9 +126,12 @@ export default function MockDataAnalyticsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="bg-[#0f0f1a]/60 rounded-lg p-4 mb-4 border border-purple-500/10 hover:bg-[#1a1025]/50 transition-all duration-300"
+        className="bg-[#15111e]/60 rounded-lg p-4 mb-4 border border-purple-500/10 hover:border-pink-500/20 transition-all duration-300"
       >
-        <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSession(session._id)}>
+        <div
+          className="flex justify-between items-center cursor-pointer"
+          onClick={() => toggleSession(session._id)}
+        >
           <div>
             <p className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
               {type === "interview" ? session.jobPosition || "Untitled Interview" : session.topic || "Untitled GD"}
@@ -145,7 +148,7 @@ export default function MockDataAnalyticsPage() {
                   scores[metric] >= 4
                     ? "text-green-400"
                     : scores[metric] === 3
-                    ? "text-pink-400"
+                    ? "text-yellow-400"
                     : "text-red-400"
                 }`}
               >
@@ -155,11 +158,17 @@ export default function MockDataAnalyticsPage() {
           </div>
         </div>
         {isExpanded && (
-          <div className="mt-4 border-t border-purple-500/20 pt-4">
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4 border-t border-purple-500/20 pt-4"
+          >
             {type === "interview" ? (
               (session.results || []).map((item, idx) => (
                 <div key={idx} className="mb-4">
-                  <p className="text-white">
+                  <p className="text-gray-200">
                     <strong>Q{idx + 1}:</strong> {item.question || "N/A"}
                   </p>
                   <p className="text-gray-300">
@@ -173,7 +182,7 @@ export default function MockDataAnalyticsPage() {
             ) : (
               (session.analysis || []).map((item, idx) => (
                 <div key={idx} className="mb-4">
-                  <p className="text-white">
+                  <p className="text-gray-200">
                     <strong>Turn {idx + 1}:</strong> {item.response || "N/A"}
                   </p>
                   <p className="text-gray-300">
@@ -182,7 +191,7 @@ export default function MockDataAnalyticsPage() {
                 </div>
               ))
             )}
-          </div>
+          </motion.div>
         )}
       </motion.div>
     );
@@ -190,71 +199,65 @@ export default function MockDataAnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0f1a] via-[#1a1025] to-[#1e0a2e] text-white overflow-hidden">
-      {/* Background mesh gradients */}
+      {/* Animated Background Elements */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-radial from-[#5f0f9980] via-transparent to-transparent opacity-30" />
         <div className="absolute inset-0 bg-gradient-radial from-[#e91e6380] via-transparent to-transparent opacity-20 translate-x-1/2" />
-        <div className="absolute inset-0 bg-gradient-radial from-[#4a00e080] via-transparent to-transparent opacity-20 translate-y-1/4" />
-        <div className="absolute inset-0 bg-gradient-radial from-[#8e2de280] via-transparent to-transparent opacity-30 -translate-x-1/3 translate-y-1/2" />
+        <div className="absolute top-0 left-0 w-full h-full">
+          {Array.from({ length: 70 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                width: `${Math.random() * 2 + 1}px`,
+                height: `${Math.random() * 2 + 1}px`,
+                opacity: Math.random() * 0.8 + 0.2,
+                animationDuration: `${Math.random() * 5 + 2}s`,
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Stars background */}
-      <div className="fixed inset-0 z-0 overflow-hidden">
-        {Array.from({ length: 50 }).map((_, i) => (
-          <div
-            key={i}
-            className={`absolute rounded-full bg-white ${i % 3 === 0 ? "animate-pulse" : ""}`}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 2 + 1}px`,
-              height: `${Math.random() * 2 + 1}px`,
-              opacity: Math.random() * 0.8 + 0.2,
-            }}
-          />
-        ))}
-      </div>
+      {/* Main Container */}
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {/* Navigation Bar */}
+        <motion.nav
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex justify-between items-center mb-8 bg-[#1a1025]/40 backdrop-blur-md px-6 py-3 rounded-xl border border-purple-500/10"
+        >
+          <div className="flex items-center space-x-2">
+            <BarChart2 className="h-6 w-6 text-pink-400" />
+            <h1 className="text-xl font-bold">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
+                Mock Data Analytics
+              </span>
+            </h1>
+          </div>
+        </motion.nav>
 
-      <div className="container mx-auto px-4 py-12 relative z-10">
-        {/* Main content card */}
+        {/* Main Content Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-6xl mx-auto bg-gradient-to-tr from-[#1a0b25]/80 to-[#2a1040]/80 backdrop-blur-md p-1 rounded-2xl overflow-hidden"
+          className="max-w-6xl mx-auto bg-gradient-to-tr from-[#1a0b25]/80 to-[#2a1040]/80 backdrop-blur-md p-1 rounded-2xl shadow-lg overflow-hidden"
         >
           <div className="bg-[#0f0f1a]/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-purple-500/20">
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex items-center justify-center mb-8"
-            >
-              <BarChart2 className="h-8 w-8 text-pink-500 mr-3" />
-              <h1 className="text-2xl md:text-3xl font-bold text-center">
-                Mock Data{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
-                  Analytics
-                </span>
-              </h1>
-            </motion.div>
-
             {/* Tabs */}
-            <motion.div
-              className="flex gap-4 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
+            <motion.div className="flex gap-4 mb-6">
               <motion.button
                 onClick={() => setActiveTab("interviews")}
                 whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
                 whileTap={{ scale: 0.95 }}
-                className={`flex items-center py-2 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                className={`flex items-center py-2 px-4 rounded-lg font-semibold transition-all duration-300 text-sm ${
                   activeTab === "interviews"
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white"
-                    : "bg-[#0f0f1a]/60 text-gray-400 border border-purple-500/10 hover:bg-[#1a1025]/50"
+                    : "bg-[#15111e]/60 text-gray-400 border border-purple-500/20 hover:border-pink-500/40"
                 }`}
               >
                 <Mic className="h-4 w-4 mr-2" />
@@ -264,10 +267,10 @@ export default function MockDataAnalyticsPage() {
                 onClick={() => setActiveTab("group-discussions")}
                 whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
                 whileTap={{ scale: 0.95 }}
-                className={`flex items-center py-2 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                className={`flex items-center py-2 px-4 rounded-lg font-semibold transition-all duration-300 text-sm ${
                   activeTab === "group-discussions"
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white"
-                    : "bg-[#0f0f1a]/60 text-gray-400 border border-purple-500/10 hover:bg-[#1a1025]/50"
+                    : "bg-[#15111e]/60 text-gray-400 border border-purple-500/20 hover:border-pink-500/40"
                 }`}
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -275,216 +278,218 @@ export default function MockDataAnalyticsPage() {
               </motion.button>
             </motion.div>
 
-            {/* Track Record Section */}
-            <motion.div
-              className="mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-4">
-                Your Track Record
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Line Chart */}
-                <motion.div
-                  className="bg-[#1a1025]/50 backdrop-blur-sm rounded-lg p-4 border border-purple-500/10"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.5 }}
-                >
-                  <h3 className="text-lg text-white mb-2">Score Trends Over Time</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={getTrendData(activeTab === "interviews" ? interviewData : gdData)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#4b5563" />
-                      <XAxis dataKey="name" stroke="#fff" />
-                      <YAxis domain={[0, 5]} stroke="#fff" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1a1025",
-                          border: "none",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                      />
-                      <Legend wrapperStyle={{ color: "#fff" }} />
-                      <Line type="monotone" dataKey="communication" stroke="#ec4899" />
-                      <Line type="monotone" dataKey="clarity" stroke="#a855f7" />
-                      <Line type="monotone" dataKey="confidence" stroke="#8b5cf6" />
-                      <Line type="monotone" dataKey="engagement" stroke="#d946ef" />
-                      <Line type="monotone" dataKey="reasoning" stroke="#f472b6" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </motion.div>
-                {/* Radar Chart */}
-                <motion.div
-                  className="bg-[#1a1025]/50 backdrop-blur-sm rounded-lg p-4 border border-purple-500/10"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.6 }}
-                >
-                  <h3 className="text-lg text-white mb-2">Average Performance</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RadarChart data={getRadarData(activeTab === "interviews" ? interviewData : gdData)}>
-                      <PolarGrid stroke="#4b5563" />
-                      <PolarAngleAxis dataKey="metric" stroke="#fff" />
-                      <PolarRadiusAxis angle={90} domain={[0, 5]} stroke="#fff" />
-                      <Radar
-                        name="Performance"
-                        dataKey="value"
-                        stroke="#ec4899"
-                        fill="#ec4899"
-                        fillOpacity={0.6}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1a1025",
-                          border: "none",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </motion.div>
-              </div>
-              {/* Insights */}
+            <AnimatePresence mode="wait">
               <motion.div
-                className="bg-[#1a1025]/50 backdrop-blur-sm rounded-lg p-4 mt-4 border border-purple-500/10"
+                key={activeTab}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.7 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-white font-semibold">Strengths:</p>
-                    <ul className="text-gray-300">
-                      {getInsights(activeTab === "interviews" ? interviewData : gdData).strengths.map(
-                        (s, idx) => (
-                          <li key={idx}>• {s.charAt(0).toUpperCase() + s.slice(1)}</li>
-                        )
-                      )}
-                      {!getInsights(activeTab === "interviews" ? interviewData : gdData).strengths.length && (
-                        <li>• None yet, keep practicing!</li>
-                      )}
-                    </ul>
+                {/* Track Record Section */}
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-4">
+                    Your Track Record
+                  </h2>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Line Chart */}
+                    <motion.div
+                      className="bg-[#15111e]/60 backdrop-blur-sm rounded-lg p-4 border border-purple-500/10 hover:border-pink-500/20"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <h3 className="text-lg text-gray-200 mb-2">Score Trends Over Time</h3>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={getTrendData(activeTab === "interviews" ? interviewData : gdData)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#4b5563" />
+                          <XAxis dataKey="name" stroke="#fff" />
+                          <YAxis domain={[0, 5]} stroke="#fff" />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#1a1025",
+                              border: "none",
+                              borderRadius: "8px",
+                              color: "#fff",
+                            }}
+                          />
+                          <Legend wrapperStyle={{ color: "#fff" }} />
+                          <Line type="monotone" dataKey="communication" stroke="#ec4899" />
+                          <Line type="monotone" dataKey="clarity" stroke="#a855f7" />
+                          <Line type="monotone" dataKey="confidence" stroke="#8b5cf6" />
+                          <Line type="monotone" dataKey="engagement" stroke="#d946ef" />
+                          <Line type="monotone" dataKey="reasoning" stroke="#f472b6" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </motion.div>
+                    {/* Radar Chart */}
+                    <motion.div
+                      className="bg-[#15111e]/60 backdrop-blur-sm rounded-lg p-4 border border-purple-500/10 hover:border-pink-500/20"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <h3 className="text-lg text-gray-200 mb-2">Average Performance</h3>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <RadarChart data={getRadarData(activeTab === "interviews" ? interviewData : gdData)}>
+                          <PolarGrid stroke="#4b5563" />
+                          <PolarAngleAxis dataKey="metric" stroke="#fff" />
+                          <PolarRadiusAxis angle={90} domain={[0, 5]} stroke="#fff" />
+                          <Radar
+                            name="Performance"
+                            dataKey="value"
+                            stroke="#ec4899"
+                            fill="#ec4899"
+                            fillOpacity={0.6}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#1a1025",
+                              border: "none",
+                              borderRadius: "8px",
+                              color: "#fff",
+                            }}
+                          />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </motion.div>
                   </div>
-                  <div>
-                    <p className="text-white font-semibold">Areas for Improvement:</p>
-                    <ul className="text-gray-300">
-                      {getInsights(activeTab === "interviews" ? interviewData : gdData).improvements.map(
-                        (i, idx) => (
-                          <li key={idx}>• {i.charAt(0).toUpperCase() + i.slice(1)}</li>
-                        )
-                      )}
-                      {!getInsights(activeTab === "interviews" ? interviewData : gdData).improvements.length && (
-                        <li>• Doing great, maintain consistency!</li>
-                      )}
-                    </ul>
-                  </div>
+                  {/* Insights */}
+                  <motion.div
+                    className="bg-[#15111e]/60 backdrop-blur-sm rounded-lg p-4 mt-4 border border-purple-500/10 hover:border-pink-500/20"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-gray-200 font-semibold">Strengths:</p>
+                        <ul className="text-gray-300 text-sm">
+                          {getInsights(activeTab === "interviews" ? interviewData : gdData).strengths.map(
+                            (s, idx) => (
+                              <li key={idx}>• {s.charAt(0).toUpperCase() + s.slice(1)}</li>
+                            )
+                          )}
+                          {!getInsights(activeTab === "interviews" ? interviewData : gdData).strengths.length && (
+                            <li>• None yet, keep practicing!</li>
+                          )}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-gray-200 font-semibold">Areas for Improvement:</p>
+                        <ul className="text-gray-300 text-sm">
+                          {getInsights(activeTab === "interviews" ? interviewData : gdData).improvements.map(
+                            (i, idx) => (
+                              <li key={idx}>• {i.charAt(0).toUpperCase() + i.slice(1)}</li>
+                            )
+                          )}
+                          {!getInsights(activeTab === "interviews" ? interviewData : gdData).improvements.length && (
+                            <li>• Doing great, maintain consistency!</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Past Sessions Section */}
+                <div>
+                  <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-4">
+                    Past Sessions
+                  </h2>
+                  {isLoading ? (
+                    <div className="flex justify-center items-center py-20">
+                      <div className="w-16 h-16 border-4 border-purple-500/30 border-t-pink-500 rounded-full animate-spin"></div>
+                    </div>
+                  ) : activeTab === "interviews" ? (
+                    interviewData.length ? (
+                      <>
+                        {interviewData.map((session) => renderSession(session, "interview"))}
+                        <div className="flex justify-between mt-4">
+                          <motion.button
+                            onClick={() => setInterviewPage((p) => Math.max(1, p - 1))}
+                            disabled={interviewPage === 1}
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
+                            whileTap={{ scale: 0.95 }}
+                            className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50 text-sm"
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-2 inline" />
+                            Previous
+                          </motion.button>
+                          <motion.button
+                            onClick={() => setInterviewPage((p) => p + 1)}
+                            disabled={interviewData.length < itemsPerPage}
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
+                            whileTap={{ scale: 0.95 }}
+                            className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50 text-sm"
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-2 inline" />
+                          </motion.button>
+                        </div>
+                      </>
+                    ) : (
+                      <motion.div
+                        className="bg-[#15111e]/60 backdrop-blur-sm rounded-xl p-8 text-center border border-purple-500/10"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <p className="text-gray-400">No interview sessions found. Start practicing!</p>
+                      </motion.div>
+                    )
+                  ) : (
+                    gdData.length ? (
+                      <>
+                        {gdData.map((session) => renderSession(session, "gd"))}
+                        <div className="flex justify-between mt-4">
+                          <motion.button
+                            onClick={() => setGdPage((p) => Math.max(1, p - 1))}
+                            disabled={gdPage === 1}
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
+                            whileTap={{ scale: 0.95 }}
+                            className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50 text-sm"
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-2 inline" />
+                            Previous
+                          </motion.button>
+                          <motion.button
+                            onClick={() => setGdPage((p) => p + 1)}
+                            disabled={gdData.length < itemsPerPage}
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
+                            whileTap={{ scale: 0.95 }}
+                            className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50 text-sm"
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-2 inline" />
+                          </motion.button>
+                        </div>
+                      </>
+                    ) : (
+                      <motion.div
+                        className="bg-[#15111e]/60 backdrop-blur-sm rounded-xl p-8 text-center border border-purple-500/10"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <p className="text-gray-400">No group discussion sessions found. Start practicing!</p>
+                      </motion.div>
+                    )
+                  )}
                 </div>
               </motion.div>
-            </motion.div>
+            </AnimatePresence>
 
-            {/* Past Sessions Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-4">
-                Past Sessions
-              </h2>
-              {isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-                </div>
-              ) : activeTab === "interviews" ? (
-                interviewData.length ? (
-                  <>
-                    {interviewData.map((session) => renderSession(session, "interview"))}
-                    <div className="flex justify-between mt-4">
-                      <motion.button
-                        onClick={() => setInterviewPage((p) => Math.max(1, p - 1))}
-                        disabled={interviewPage === 1}
-                        whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
-                        whileTap={{ scale: 0.95 }}
-                        className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-2 inline" />
-                        Previous
-                      </motion.button>
-                      <motion.button
-                        onClick={() => setInterviewPage((p) => p + 1)}
-                        disabled={interviewData.length < itemsPerPage}
-                        whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
-                        whileTap={{ scale: 0.95 }}
-                        className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-2 inline" />
-                      </motion.button>
-                    </div>
-                  </>
-                ) : (
-                  <motion.div
-                    className="bg-[#1a1025]/50 backdrop-blur-sm rounded-xl p-8 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <p className="text-gray-400">No interview sessions found. Start practicing!</p>
-                  </motion.div>
-                )
-              ) : (
-                gdData.length ? (
-                  <>
-                    {gdData.map((session) => renderSession(session, "gd"))}
-                    <div className="flex justify-between mt-4">
-                      <motion.button
-                        onClick={() => setGdPage((p) => Math.max(1, p - 1))}
-                        disabled={gdPage === 1}
-                        whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
-                        whileTap={{ scale: 0.95 }}
-                        className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-2 inline" />
-                        Previous
-                      </motion.button>
-                      <motion.button
-                        onClick={() => setGdPage((p) => p + 1)}
-                        disabled={gdData.length < itemsPerPage}
-                        whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(236,72,153,0.5)" }}
-                        whileTap={{ scale: 0.95 }}
-                        className="py-2 px-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg disabled:opacity-50"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-2 inline" />
-                      </motion.button>
-                    </div>
-                  </>
-                ) : (
-                  <motion.div
-                    className="bg-[#1a1025]/50 backdrop-blur-sm rounded-xl p-8 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <p className="text-gray-400">No group discussion sessions found. Start practicing!</p>
-                  </motion.div>
-                )
-              )}
-            </motion.div>
-
-            {/* Back to dashboard */}
+            {/* Back to Dashboard */}
             <div className="mt-8 text-center">
               <motion.button
                 onClick={() => navigate("/dashboard")}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="text-gray-400 hover:text-white transition-colors text-sm inline-flex items-center"
+                className="text-gray-400 hover:text-pink-400 transition-colors text-sm inline-flex items-center"
+                aria-label="Back to Dashboard"
               >
-                <ArrowRight className="h-4 w-4 mr-1 rotate-180" />
+                <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Dashboard
               </motion.button>
             </div>
