@@ -3,22 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Mic, 
-  Send, 
-  RefreshCw, 
-  ArrowLeft, 
-  MessageSquare, 
-  User, 
-  Bot, 
+import {
+  Mic,
+  Send,
+  RefreshCw,
+  ArrowLeft,
+  MessageSquare,
+  User,
+  Bot,
   ChevronRight,
   Award,
   BarChart3,
   Brain,
   Volume2,
-  UserCircle2,
-  Calendar,
-  Settings
 } from "lucide-react";
 
 export default function MockGD() {
@@ -49,27 +46,6 @@ export default function MockGD() {
     return () => speechRecognition?.stop();
   }, [isVoiceOn, step]);
 
-  useEffect(() => {
-    if (step !== "analysis" || !analysis.length) return;
-    async function saveResults() {
-      try {
-        const response = await fetch("http://localhost:3000/api/mock-gd/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({ topic, hardnessLevel, discussion, analysis, overallScores }),
-        });
-        if (!response.ok) toast.error("Failed to save results");
-        else toast.success("Results saved successfully");
-      } catch (error) {
-        toast.error("Error saving results");
-      }
-    }
-    saveResults();
-  }, [step, analysis, overallScores, topic, hardnessLevel, discussion]);
-
   async function handleTopicSubmit(event) {
     event.preventDefault();
     setIsLoading(true);
@@ -96,6 +72,48 @@ export default function MockGD() {
     }
   }
 
+  async function saveResults(scores) {
+    if (!isValidOverallScores(scores)) {
+      console.error('Cannot save results: invalid overallScores:', scores);
+      toast.error("Unable to save results due to invalid scores.");
+      return false;
+    }
+    try {
+      const response = await fetch("http://localhost:3000/api/mock-gd/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ topic, hardnessLevel, discussion, analysis, overallScores: scores }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Save results failed:', errorData);
+        toast.error(errorData.error || "Failed to save results");
+        return false;
+      }
+      toast.success("Results saved successfully");
+      return true;
+    } catch (error) {
+      console.error('Error saving results:', error);
+      toast.error("Error saving results");
+      return false;
+    }
+  }
+
+  // Validate overallScores to ensure all required fields are present and valid
+  const isValidOverallScores = (scores) => {
+    const requiredFields = ["communication", "clarity", "confidence", "engagement", "reasoning"];
+    return (
+      scores &&
+      typeof scores === "object" &&
+      requiredFields.every(
+        (field) => field in scores && typeof scores[field] === "number" && scores[field] >= 1 && scores[field] <= 5
+      )
+    );
+  };
+
   async function handleResponseSubmit() {
     if (!responseText) return toast.error("Please provide a response");
     setIsLoading(true);
@@ -112,26 +130,42 @@ export default function MockGD() {
       if (response.ok) {
         // Add user response first
         setDiscussion((prev) => [{ speaker: "User", text: responseText }, ...prev]);
-        
+  
         // Add AI responses with a delay
         if (data.aiResponses && data.aiResponses.length > 0) {
           data.aiResponses.forEach((aiResponse, index) => {
             setTimeout(() => {
               setDiscussion((prev) => [aiResponse, ...prev]);
-            }, (index + 1) * 1000); // 1-second delay per AI response
+            }, (index + 1) * 1000);
           });
         }
-
+  
         setResponseText("");
         setIsVoiceOn(false);
         setCurrentTurn((prev) => prev + 1);
         if (data.analysis) setAnalysis(data.analysis);
-        if (data.overallScores) setOverallScores(data.overallScores);
-        if (currentTurn === 4) setStep("analysis");
+  
+        if (currentTurn === 4) {
+          if (isValidOverallScores(data.overallScores)) {
+            setOverallScores(data.overallScores);
+            setStep("analysis");
+            // Call saveResults with the latest scores directly
+            const saveSuccess = await saveResults(data.overallScores);
+            if (!saveSuccess) {
+              console.warn('Failed to save results, but proceeding to analysis');
+            }
+          } else {
+            console.warn('Invalid overallScores received:', data.overallScores);
+            toast.error("Unable to save results due to invalid scores, but you can still view the analysis.");
+            setOverallScores(null);
+            setStep("analysis");
+          }
+        }
       } else {
         toast.error(data.error || "Failed to process response");
       }
     } catch (error) {
+      console.error('Error in handleResponseSubmit:', error);
       toast.error("Failed to process response");
     } finally {
       setIsLoading(false);
@@ -161,14 +195,15 @@ export default function MockGD() {
     return "text-red-400";
   };
 
-  const getScoreEmoji = (score) => {
-    if (score >= 4) return "★★★★★";
-    if (score === 3) return "★★★☆☆";
-    return "★★☆☆☆";
+  const getScoreStars = (score) => {
+    if (typeof score !== "number" || score < 1 || score > 5) return "☆☆☆☆☆";
+    const fullStars = Math.floor(score);
+    const emptyStars = 5 - fullStars;
+    return "★".repeat(fullStars) + "☆".repeat(emptyStars);
   };
 
   const getHardnessColor = (level) => {
-    switch(level) {
+    switch (level) {
       case "Easy": return "text-green-400";
       case "Medium": return "text-yellow-400";
       case "Hard": return "text-orange-400";
@@ -180,12 +215,11 @@ export default function MockGD() {
   const fadeAnimation = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 }
+    exit: { opacity: 0, y: -20 },
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0f1a] via-[#1a1025] to-[#1e0a2e] text-white overflow-hidden">
-      {/* Animated Background Elements */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-radial from-[#5f0f9980] via-transparent to-transparent opacity-30" />
         <div className="absolute inset-0 bg-gradient-radial from-[#e91e6380] via-transparent to-transparent opacity-20 translate-x-1/2" />
@@ -207,10 +241,8 @@ export default function MockGD() {
         </div>
       </div>
 
-      {/* Main Container */}
       <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Navigation Bar */}
-        <motion.nav 
+        <motion.nav
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -226,7 +258,6 @@ export default function MockGD() {
           </div>
         </motion.nav>
 
-        {/* Main Content Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -234,9 +265,7 @@ export default function MockGD() {
           className="max-w-5xl mx-auto bg-gradient-to-tr from-[#1a0b25]/80 to-[#2a1040]/80 backdrop-blur-md p-1 rounded-2xl shadow-lg overflow-hidden"
         >
           <div className="bg-[#0f0f1a]/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-purple-500/20 min-h-[75vh]">
-            {/* Header with breadcrumbs */}
-            <div className="flex items-center mb-6 text-sm text-gray-4
-00">
+            <div className="flex items-center mb-6 text-sm text-gray-400">
               <span className={`${step === "input" ? "text-pink-400 font-medium" : ""}`}>Choose Topic</span>
               <ChevronRight className="h-4 w-4 mx-2" />
               <span className={`${step === "discussion" ? "text-pink-400 font-medium" : ""}`}>Discussion</span>
@@ -244,16 +273,13 @@ export default function MockGD() {
               <span className={`${step === "analysis" ? "text-pink-400 font-medium" : ""}`}>Analysis</span>
             </div>
 
-            {/* Loading Spinner (Removed Button) */}
             {isLoading && (
               <div className="flex justify-center items-center py-20">
                 <div className="w-16 h-16 border-4 border-purple-500/30 border-t-pink-500 rounded-full animate-spin"></div>
               </div>
             )}
 
-            {/* Content Sections with AnimatePresence for smooth transitions */}
             <AnimatePresence mode="wait">
-              {/* Step 1: Topic Selection */}
               {!isLoading && step === "input" && (
                 <motion.div
                   key="input"
@@ -265,9 +291,7 @@ export default function MockGD() {
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold mb-2">
-                      Start Your Mock Group Discussion
-                    </h2>
+                    <h2 className="text-2xl font-bold mb-2">Start Your Mock Group Discussion</h2>
                     <p className="text-gray-400 max-w-lg mx-auto">
                       Participate in a realistic group discussion simulation to improve your communication skills.
                       Receive detailed feedback on your performance.
@@ -288,7 +312,9 @@ export default function MockGD() {
                         required
                         className="w-full px-4 py-3 bg-[#15111e]/80 border border-purple-500/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-transparent transition-all duration-300"
                       />
-                      <p className="text-xs text-gray-400 mt-1">Enter a topic you'd like to discuss or leave blank for a random topic</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Enter a topic you'd like to discuss or leave blank for a random topic
+                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -300,9 +326,11 @@ export default function MockGD() {
                             type="button"
                             onClick={() => setHardnessLevel(level)}
                             className={`py-2 px-3 rounded-lg text-sm font-medium transition duration-300 
-                              ${hardnessLevel === level 
-                                ? "bg-gradient-to-r from-pink-600/80 to-purple-600/80 border-none text-white shadow-lg shadow-pink-600/20" 
-                                : "bg-[#15111e]/60 border border-purple-500/20 text-gray-300 hover:border-pink-500/40"}`}
+                              ${
+                                hardnessLevel === level
+                                  ? "bg-gradient-to-r from-pink-600/80 to-purple-600/80 border-none text-white shadow-lg shadow-pink-600/20"
+                                  : "bg-[#15111e]/60 border border-purple-500/20 text-gray-300 hover:border-pink-500/40"
+                              }`}
                           >
                             {level}
                           </button>
@@ -324,7 +352,6 @@ export default function MockGD() {
                 </motion.div>
               )}
 
-              {/* Step 2: Discussion */}
               {!isLoading && step === "discussion" && (
                 <motion.div
                   key="discussion"
@@ -344,17 +371,18 @@ export default function MockGD() {
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${getHardnessColor(hardnessLevel)} bg-[#15111e]/80`}>
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getHardnessColor(
+                            hardnessLevel
+                          )} bg-[#15111e]/80`}
+                        >
                           {hardnessLevel}
                         </div>
-                        <div className="text-xs text-gray-400">
-                          Turn {currentTurn + 1} of 5
-                        </div>
+                        <div className="text-xs text-gray-400">Turn {currentTurn + 1} of 5</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
                   <div className="w-full bg-[#1a1025]/50 rounded-full h-2 mb-6">
                     <div
                       className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-in-out"
@@ -362,7 +390,6 @@ export default function MockGD() {
                     ></div>
                   </div>
 
-                  {/* Conversation Section */}
                   <div className="bg-[#15111e]/60 rounded-xl p-4 border border-purple-500/10 h-64 overflow-y-auto mb-4 space-y-4">
                     {discussion.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
@@ -371,49 +398,51 @@ export default function MockGD() {
                         <p>Start by submitting your first response!</p>
                       </div>
                     ) : (
-                      discussion.slice().reverse().map((item, idx) => (
-                        <motion.div
-                          key={`${item.speaker}-${item.text}-${idx}`}
-                          initial={{ opacity: 0, x: item.speaker === "User" ? 20 : -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.4 }}
-                          className={`flex items-start gap-3 p-3 rounded-lg ${
-                            item.speaker === "User"
-                              ? "bg-gradient-to-r from-pink-900/20 to-purple-900/20 border border-pink-500/20 ml-6"
-                              : "bg-[#0f0f1a]/60 border border-purple-500/10 mr-6"
-                          }`}
-                        >
-                          <div className={`flex-shrink-0 rounded-full p-2 ${
-                            item.speaker === "User" 
-                              ? "bg-pink-500/20" 
-                              : "bg-purple-500/20"
-                          }`}>
-                            {item.speaker === "User" ? (
-                              <User className="h-4 w-4 text-pink-400" />
-                            ) : (
-                              <Bot className="h-4 w-4 text-purple-400" />
-                            )}
-                          </div>
-                          <div>
-                            <div className={`text-xs font-medium mb-1 ${
-                              item.speaker === "User" ? "text-pink-400" : "text-purple-400"
-                            }`}>
-                              {item.speaker}
+                      discussion
+                        .slice()
+                        .reverse()
+                        .map((item, idx) => (
+                          <motion.div
+                            key={`${item.speaker}-${item.text}-${idx}`}
+                            initial={{ opacity: 0, x: item.speaker === "User" ? 20 : -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className={`flex items-start gap-3 p-3 rounded-lg ${
+                              item.speaker === "User"
+                                ? "bg-gradient-to-r from-pink-900/20 to-purple-900/20 border border-pink-500/20 ml-6"
+                                : "bg-[#0f0f1a]/60 border border-purple-500/10 mr-6"
+                            }`}
+                          >
+                            <div
+                              className={`flex-shrink-0 rounded-full p-2 ${
+                                item.speaker === "User" ? "bg-pink-500/20" : "bg-purple-500/20"
+                              }`}
+                            >
+                              {item.speaker === "User" ? (
+                                <User className="h-4 w-4 text-pink-400" />
+                              ) : (
+                                <Bot className="h-4 w-4 text-purple-400" />
+                              )}
                             </div>
-                            <p className="text-sm">{item.text}</p>
-                          </div>
-                        </motion.div>
-                      ))
+                            <div>
+                              <div
+                                className={`text-xs font-medium mb-1 ${
+                                  item.speaker === "User" ? "text-pink-400" : "text-purple-400"
+                                }`}
+                              >
+                                {item.speaker}
+                              </div>
+                              <p className="text-sm">{item.text}</p>
+                            </div>
+                          </motion.div>
+                        ))
                     )}
                   </div>
 
-                  {/* Response Input Area */}
                   <div className="bg-[#15111e]/60 rounded-xl p-4 border border-purple-500/10">
                     <div className="mb-2 flex justify-between items-center">
                       <label className="text-sm font-medium text-gray-300">Your Response</label>
-                      <div className="text-xs text-gray-400">
-                        {responseText.length} characters
-                      </div>
+                      <div className="text-xs text-gray-400">{responseText.length} characters</div>
                     </div>
                     <textarea
                       value={responseText}
@@ -421,7 +450,6 @@ export default function MockGD() {
                       placeholder="Type your response or use voice input..."
                       className="w-full px-4 py-3 bg-[#0f0f1a]/60 border border-purple-500/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-transparent transition-all duration-300 min-h-24"
                     />
-                    
                     <div className="flex gap-3 mt-3">
                       <motion.button
                         onClick={toggleVoice}
@@ -460,7 +488,6 @@ export default function MockGD() {
                 </motion.div>
               )}
 
-              {/* Step 3: Analysis */}
               {!isLoading && step === "analysis" && (
                 <motion.div
                   key="analysis"
@@ -480,13 +507,12 @@ export default function MockGD() {
                     </p>
                   </div>
 
-                  {/* Analysis Tabs */}
                   <div className="flex border-b border-purple-500/20 mb-6">
                     <button
                       onClick={() => setSelectedAnalysisTab("feedback")}
                       className={`py-2 px-4 font-medium text-sm border-b-2 transition-all ${
-                        selectedAnalysisTab === "feedback" 
-                          ? "border-pink-500 text-pink-400" 
+                        selectedAnalysisTab === "feedback"
+                          ? "border-pink-500 text-pink-400"
                           : "border-transparent text-gray-400 hover:text-gray-200"
                       }`}
                     >
@@ -495,8 +521,8 @@ export default function MockGD() {
                     <button
                       onClick={() => setSelectedAnalysisTab("scores")}
                       className={`py-2 px-4 font-medium text-sm border-b-2 transition-all ${
-                        selectedAnalysisTab === "scores" 
-                          ? "border-pink-500 text-pink-400" 
+                        selectedAnalysisTab === "scores"
+                          ? "border-pink-500 text-pink-400"
                           : "border-transparent text-gray-400 hover:text-gray-200"
                       }`}
                     >
@@ -505,8 +531,8 @@ export default function MockGD() {
                     <button
                       onClick={() => setSelectedAnalysisTab("summary")}
                       className={`py-2 px-4 font-medium text-sm border-b-2 transition-all ${
-                        selectedAnalysisTab === "summary" 
-                          ? "border-pink-500 text-pink-400" 
+                        selectedAnalysisTab === "summary"
+                          ? "border-pink-500 text-pink-400"
                           : "border-transparent text-gray-400 hover:text-gray-200"
                       }`}
                     >
@@ -514,7 +540,6 @@ export default function MockGD() {
                     </button>
                   </div>
 
-                  {/* Feedback Tab Content */}
                   <AnimatePresence mode="wait">
                     {selectedAnalysisTab === "feedback" && (
                       <motion.div
@@ -554,8 +579,7 @@ export default function MockGD() {
                       </motion.div>
                     )}
 
-                    {/* Scores Tab Content */}
-                    {selectedAnalysisTab === "scores" && overallScores && (
+                    {selectedAnalysisTab === "scores" && (
                       <motion.div
                         key="scores"
                         initial={{ opacity: 0 }}
@@ -568,40 +592,44 @@ export default function MockGD() {
                           <Award className="h-5 w-5 text-pink-400 mr-2" />
                           <h3 className="text-lg font-semibold text-gray-200">Performance Metrics</h3>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {Object.entries(overallScores).map(([key, score], idx) => (
-                            <motion.div
-                              key={key}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: idx * 0.1 }}
-                              className="bg-[#0f0f1a]/40 rounded-lg p-4 border border-purple-500/10 hover:border-pink-500/20 transition-colors"
-                            >
-                              <div className="flex justify-between items-center mb-2">
-                                <h4 className="text-sm font-medium text-gray-300 capitalize">{key}</h4>
-                                <div className={`text-lg font-bold ${getScoreColor(score)}`}>
-                                  {score}/5
+                        {isValidOverallScores(overallScores) ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {Object.entries(overallScores).map(([key, score], idx) => (
+                              <motion.div
+                                key={key}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: idx * 0.1 }}
+                                className="bg-[#0f0f1a]/40 rounded-lg p-4 border border-purple-500/10 hover:border-pink-500/20 transition-colors"
+                              >
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="text-sm font-medium text-gray-300 capitalize">{key}</h4>
+                                  <div className={`text-lg font-bold ${getScoreColor(score)}`}>
+                                    {score}/5
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="w-full bg-[#1a1025]/50 rounded-full h-2 mb-1">
-                                <div
-                                  className={`${
-                                    score >= 4 ? "bg-green-400" : score === 3 ? "bg-yellow-400" : "bg-red-400"
-                                  } h-2 rounded-full transition-all duration-500`}
-                                  style={{ width: `${(score / 5) * 100}%` }}
-                                ></div>
-                              </div>
-                              <div className="text-xs text-right text-gray-400">
-                                {getScoreEmoji(score)}
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
+                                <div className="w-full bg-[#1a1025]/50 rounded-full h-2 mb-2">
+                                  <div
+                                    className={`${
+                                      score >= 4 ? "bg-green-400" : score === 3 ? "bg-yellow-400" : "bg-red-400"
+                                    } h-2 rounded-full transition-all duration-500`}
+                                    style={{ width: `${(score / 5) * 100}%` }}
+                                  ></div>
+                                </div>
+                                <div className="text-sm text-right text-yellow-400">
+                                  {getScoreStars(score)}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 text-center">
+                            Scores are unavailable due to an issue with the evaluation.
+                          </p>
+                        )}
                       </motion.div>
                     )}
 
-                    {/* Summary Tab Content */}
                     {selectedAnalysisTab === "summary" && (
                       <motion.div
                         key="summary"
@@ -615,25 +643,29 @@ export default function MockGD() {
                           <BarChart3 className="h-5 w-5 text-pink-400 mr-2" />
                           <h3 className="text-lg font-semibold text-gray-200">Discussion Summary</h3>
                         </div>
-
                         <div className="bg-[#0f0f1a]/40 rounded-lg p-4 border border-purple-500/10 mb-6">
                           <p className="text-sm text-gray-300 mb-2">
                             <strong>Topic:</strong> {topic || "Not specified"}
                           </p>
                           <p className="text-sm text-gray-300 mb-2">
-                            <strong>Difficulty:</strong> <span className={getHardnessColor(hardnessLevel)}>{hardnessLevel}</span>
+                            <strong>Difficulty:</strong>{" "}
+                            <span className={getHardnessColor(hardnessLevel)}>{hardnessLevel}</span>
                           </p>
                           <p className="text-sm text-gray-300 mb-2">
-                            <strong>Total Contributions:</strong> {discussion.filter(item => item.speaker === "User").length}
+                            <strong>Total Contributions:</strong>{" "}
+                            {discussion.filter((item) => item.speaker === "User").length}
                           </p>
                           <p className="text-sm text-gray-300">
-                            <strong>Average Score:</strong> {overallScores 
-                              ? (Object.values(overallScores).reduce((a, b) => a + b, 0) / Object.keys(overallScores).length).toFixed(1) 
-                              : "N/A"}/5
+                            <strong>Average Score:</strong>{" "}
+                            {isValidOverallScores(overallScores)
+                              ? (
+                                  Object.values(overallScores).reduce((a, b) => a + b, 0) /
+                                  Object.keys(overallScores).length
+                                ).toFixed(1)
+                              : "N/A"}
+                            /5
                           </p>
                         </div>
-
-                        {/* Collapsible Contributions Section */}
                         <div className="mb-6">
                           <motion.button
                             onClick={() => setIsContributionsOpen(!isContributionsOpen)}
@@ -645,8 +677,10 @@ export default function MockGD() {
                               <MessageSquare className="h-5 w-5 text-pink-400 mr-2" />
                               <h4 className="text-sm font-medium text-gray-200">Your Contributions</h4>
                             </div>
-                            <ChevronRight 
-                              className={`h-5 w-5 text-gray-400 transition-transform ${isContributionsOpen ? "rotate-90" : ""}`} 
+                            <ChevronRight
+                              className={`h-5 w-5 text-gray-400 transition-transform ${
+                                isContributionsOpen ? "rotate-90" : ""
+                              }`}
                             />
                           </motion.button>
                           <AnimatePresence>
@@ -660,15 +694,17 @@ export default function MockGD() {
                                 className="overflow-hidden"
                               >
                                 <div className="mt-2 space-y-3">
-                                  {discussion.filter(item => item.speaker === "User").map((item, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="bg-[#15111e]/60 rounded-lg p-3 border border-purple-500/10 text-sm text-gray-300"
-                                    >
-                                      <p className="italic">"{item.text}"</p>
-                                    </div>
-                                  ))}
-                                  {discussion.filter(item => item.speaker === "User").length === 0 && (
+                                  {discussion
+                                    .filter((item) => item.speaker === "User")
+                                    .map((item, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="bg-[#15111e]/60 rounded-lg p-3 border border-purple-500/10 text-sm text-gray-300"
+                                      >
+                                        <p className="italic">"{item.text}"</p>
+                                      </div>
+                                    ))}
+                                  {discussion.filter((item) => item.speaker === "User").length === 0 && (
                                     <p className="text-sm text-gray-400 text-center py-4">
                                       No contributions recorded.
                                     </p>
@@ -678,8 +714,6 @@ export default function MockGD() {
                             )}
                           </AnimatePresence>
                         </div>
-
-                        {/* Improvement Tips */}
                         <div className="bg-[#0f0f1a]/40 rounded-lg p-4 border border-purple-500/10">
                           <div className="flex items-center mb-3">
                             <Award className="h-5 w-5 text-pink-400 mr-2" />
@@ -696,7 +730,6 @@ export default function MockGD() {
                     )}
                   </AnimatePresence>
 
-                  {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-4 mt-8">
                     <motion.button
                       onClick={restartGD}
@@ -723,7 +756,6 @@ export default function MockGD() {
           </div>
         </motion.div>
 
-        {/* Back to Dashboard Link */}
         <div className="mt-8 text-center">
           <motion.button
             onClick={() => navigate("/dashboard")}

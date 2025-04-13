@@ -46,7 +46,7 @@ const analyzeAnswer = async (req, res) => {
 
     if (isLast) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Updated model name
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = `You are evaluating interview answers for a ${jobPosition} role at ${experience} level. Given the following questions and answers:\n${sessionAnswers
         .map((a, i) => `Question ${i + 1}: ${a.question}\nAnswer ${i + 1}: ${a.answer}`)
         .join('\n')}\nPerform the following:
@@ -61,7 +61,10 @@ Output only valid JSON with no additional text or markdown:
 {
   "analysis": [
     {"question": "question 1", "answer": "answer 1", "analysis": "feedback 1"},
-    ...
+    {"question": "question 2", "answer": "answer 2", "analysis": "feedback 2"},
+    {"question": "question 3", "answer": "answer 3", "analysis": "feedback 3"},
+    {"question": "question 4", "answer": "answer 4", "analysis": "feedback 4"},
+    {"question": "question 5", "answer": "answer 5", "analysis": "feedback 5"}
   ],
   "overallScores": {"communication": 1, "clarity": 1, "confidence": 1, "engagement": 1, "reasoning": 1}
 }`;
@@ -87,7 +90,16 @@ Output only valid JSON with no additional text or markdown:
         throw new Error('Invalid analysis format');
       }
 
-      response = data;
+      // Map the actual questions and answers from sessionAnswers
+      response = {
+        analysis: data.analysis.map((item, index) => ({
+          question: sessionAnswers[index]?.question || item.question,
+          answer: sessionAnswers[index]?.answer || item.answer,
+          analysis: item.analysis || '',
+        })),
+        overallScores: data.overallScores,
+      };
+
       sessionAnswers = [];
     }
 
