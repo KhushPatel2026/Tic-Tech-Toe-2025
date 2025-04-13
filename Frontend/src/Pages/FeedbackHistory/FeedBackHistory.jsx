@@ -444,30 +444,10 @@ function FeedbackHistory() {
                 </motion.button>
               </Link>
 
-              <Link to="/analytics">
-                <motion.button
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: '0 0 15px rgba(138,43,226,0.5)',
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium flex items-center justify-center"
-                >
-                  <BarChart2 className="h-4 w-4 mr-2" />
-                  View Analytics
-                </motion.button>
-              </Link>
+              
             </div>
           </div>
         </motion.div>
-
-        {/* Back to home link */}
-        <div className="mt-8 text-center">
-          <Link to="/" className="text-gray-400 hover:text-white transition-colors text-sm inline-flex items-center">
-            <ArrowRight className="h-4 w-4 mr-1 rotate-180" />
-            Back to Home
-          </Link>
-        </div>
       </div>
 
       <ToastContainer

@@ -476,20 +476,12 @@ export default function Analytics() {
               <motion.button whileHover={{scale: 1.05, boxShadow: '0 0 15px rgba(236,72,153,0.5)'}} whileTap={{scale: 0.95}} onClick={() => navigate('/dashboard')} className='w-full px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium flex items-center justify-center'>
                 <ArrowRight className='h-4 w-4 mr-2 rotate-180'/>Back to Dashboard
               </motion.button>
-              <motion.button whileHover={{scale: 1.05, boxShadow: '0 0 15px rgba(138,43,226,0.5)'}} whileTap={{scale: 0.95}} onClick={() => navigate('/feedback-history')} className='w-full px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium flex items-center justify-center'>
-                <History className='h-4 w-4 mr-2'/>View Feedback History
-              </motion.button>
               <motion.button whileHover={{scale: 1.05, boxShadow: '0 0 15px rgba(236,72,153,0.5)'}} whileTap={{scale: 0.95}} onClick={generatePDFReport} disabled={isGeneratingReport || !analytics} className='w-full px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed'>
                 <FileText className='h-4 w-4 mr-2'/>{isGeneratingReport ? 'Generating...' : 'Download Report'}
               </motion.button>
             </div>
           </div>
         </motion.div>
-        <div className='mt-8 text-center'>
-          <button onClick={() => navigate('/')} className='text-gray-400 hover:text-white transition-colors text-sm inline-flex items-center'>
-            <ArrowRight className='h-4 w-4 mr-1 rotate-180'/>Back to Home
-          </button>
-        </div>
       </div>
       <ToastContainer position='top-right' autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme='dark' toastClassName='bg-[#1a1025]/90 backdrop-blur-md border border-purple-500/20 text-white' progressClassName='bg-pink-500'/>
     </div>

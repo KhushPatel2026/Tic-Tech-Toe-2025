@@ -428,7 +428,7 @@ function Dashboard() {
               </span>
             </div>
             <p className="text-gray-400 text-sm text-center">
-              © {new Date().getFullYear()} SpeakSpace. Made with ❤️ by team Pixel.
+              © {new Date().getFullYear()} SpeakSpace. Made by team Pixel.
             </p>
           </div>
         </div>
